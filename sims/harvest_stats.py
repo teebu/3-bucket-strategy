@@ -3,7 +3,7 @@ from final_sim import calc_tax, ROC, NAV_DRIFT, COMP
 
 def run(b2_start, spend_start, n=10_000, seed=42):
     rng = np.random.default_rng(seed)
-    B1 = spend_start * 2.0; B3_START = 200_000
+    B1 = spend_start * 3.0; B3_START = 200_000
     harvest_counts=[]; harvest_amounts=[]; harvest_years=[]; b3_ends=[]; ok=0
 
     for _ in range(n):
@@ -54,7 +54,7 @@ def run(b2_start, spend_start, n=10_000, seed=42):
                 if sh>0:
                     d=min(b3,sh); b3-=d; sh-=d
                     if sh>0: alive=False; break
-            b1=b1*(1+0.04/12)**12
+            b1=b1*(1+0.015/12)**12  # 1.5% conservative SPAXX
             inf=1.03**(yr-1)
             oi=sum(b2*COMP[k]*yld[k]*(1-ROC[k]) for k in COMP)
             tax=calc_tax(oi,0.0,inf); b2=max(0.0,b2-tax)
@@ -63,8 +63,8 @@ def run(b2_start, spend_start, n=10_000, seed=42):
                 gap=orig_tgt-sp; sp=min(sp+min(sp*0.15,gap*0.25),orig_tgt)
             elif inc>=sp: sp=min(sp*1.03,orig_tgt)
             if b1<sp*0.25 and inc<sp*0.70: sp=max(sp*0.85,orig_tgt*0.80)
-            b1t=max(sp*2.0,orig_tgt*1.0)
-            if b1>b1t*3.0: b3+=(b1-b1t); b1=b1t
+            b1t=sp*3.0
+            if b1>b1t*3.0: b2+=(b1-b1t); b1=b1t  # overflow → Income Engine
             if b1<b1t*0.5:
                 nd=b1t-b1; b1+=nd; b2=max(0.0,b2-nd)
             if not alive: break
@@ -93,8 +93,8 @@ def run(b2_start, spend_start, n=10_000, seed=42):
 print('B3 Harvest Frequency  |  Final rules  |  40Q/35S/10B/15I')
 print('Trigger: income declined AND income < 2x spend AND B3 > 200k')
 print()
-print('Scenario A  60k/yr  B2=700k  B1=120k  Total=1,020k')
+print('Scenario A  60k/yr  Reserve=180k  IncEng=700k  Growth=200k  Total=1,080k')
 run(700_000, 60_000)
 print()
-print('Scenario B  100k/yr  B2=1.35M  B1=200k  Total=1,750k')
+print('Scenario B  100k/yr  Reserve=300k  IncEng=1.35M  Growth=200k  Total=1,850k')
 run(1_350_000, 100_000)

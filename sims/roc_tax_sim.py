@@ -94,7 +94,7 @@ def calc_tax(ordinary, ltcg, inflate=1.0):
 
 def run(b2_start, spend_start, n=10_000, seed=42):
     rng = np.random.default_rng(seed)
-    B1 = spend_start * 1.5
+    B1 = spend_start * 3.0
     B3 = 200_000
     IP = b2_start + B1 + B3
     ok = 0; ends = []
@@ -176,9 +176,9 @@ def run(b2_start, spend_start, n=10_000, seed=42):
                     d = min(b3,s); b3 -= d; s -= d
                     if s > 0: alive = False; break
 
-            b1 *= 1.04
-            t = sp * 1.5
-            if b1 > t*1.5: b3 += (b1-t); b1 = t
+            b1 *= 1.015  # 1.5% conservative SPAXX
+            t = sp * 3.0
+            if b1 > t*3.0: b2 += (b1-t); b1 = t  # overflow → Income Engine
 
             if yr in snaps and alive and valid:
                 snaps[yr]['b1'].append(b1);  snaps[yr]['b2'].append(b2)

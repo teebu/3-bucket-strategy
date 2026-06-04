@@ -96,7 +96,7 @@ def run_hist(start_date, b2_start, spend_start, comp, years=20):
     n_months = min(len(dates), years*12)
     if n_months < 12: return None
 
-    B1 = spend_start*1.5; B3 = 200_000
+    B1 = spend_start*3.0; B3 = 200_000
     b2=float(b2_start); b1=float(B1); b3=float(B3)
     sp=float(spend_start); cuts=0; alive=True; tgt=float(spend_start)
     basis = {k: b2_start*comp.get(k,0) for k in comp}
@@ -157,7 +157,7 @@ def run_hist(start_date, b2_start, spend_start, comp, years=20):
             if s>0:
                 d=min(b3,s); b3-=d; s-=d
                 if s>0: alive=False; break
-        b1 = b1*(1.0+0.04/12)
+        b1 = b1*(1.0+0.015/12)  # 1.5% conservative SPAXX long-run
 
         if mi%12==11:
             year_num+=1; tgt*=1.03
@@ -174,8 +174,8 @@ def run_hist(start_date, b2_start, spend_start, comp, years=20):
             elif health>=0.75: pass
             elif cuts<5:       sp*=0.85; cuts+=1
             if sp<0.80*tgt:    alive=False
-            b1_tgt=sp*1.5
-            if b1>b1_tgt*1.5: b3+=(b1-b1_tgt); b1=b1_tgt
+            b1_tgt=sp*3.0
+            if b1>b1_tgt*3.0: b2+=(b1-b1_tgt); b1=b1_tgt  # overflow → Income Engine
             log.append({'yr':year_num,'b2':b2,'total':b2+b1+b3,
                         'income':monthly_inc_acc,'spend':sp,'health':health,'alive':alive})
             monthly_inc_acc=0.0

@@ -123,7 +123,7 @@ def yields(vix, cvix):
 
 
 def run(b2_start, spend_start, label):
-    B1_START = spend_start * 2.0
+    B1_START = spend_start * 3.0
     B3_START = 200_000
 
     b2       = float(b2_start)
@@ -208,7 +208,7 @@ def run(b2_start, spend_start, label):
                     break
 
         # SGOV interest on B1
-        b1 *= 1.04
+        b1 *= 1.005  # 0.5% SPAXX — ZIRP stress test
 
         # Tax
         inflate  = 1.03 ** (yr - 1)
@@ -236,9 +236,9 @@ def run(b2_start, spend_start, label):
             notes.append(f'CUT${old/1000:.0f}k→${sp/1000:.0f}k')
 
         # B1 management
-        b1_target = sp * 2.0
+        b1_target = sp * 3.0
         if b1 > b1_target * 3.0:
-            excess = b1 - b1_target; b3 += excess; b1 = b1_target
+            excess = b1 - b1_target; b2 += excess; b1 = b1_target  # overflow → Income Engine
         if b1 < b1_target * 0.5:
             needed = b1_target - b1; b1 += needed; b2 = max(0.0, b2 - needed)
 
