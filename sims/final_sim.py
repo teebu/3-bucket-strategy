@@ -1,23 +1,30 @@
 """
 Final simulation — all updated rules.
 
-B2: 40% QQQI / 35% SPYI / 10% BTCI / 15% IAUI
-B1: 2× annual spend (auto-bridges monthly shortfalls)
-B3: VOO/QQQM/GOOGL/VXUS/SMH (b3_start=0 for Scenario C — no B3)
+Accounts:
+  Reserve (SPAXX):            3× annual spend. Receives Income Engine distributions
+                              weekly. Surplus above 3× spend invested quarterly into
+                              Income Engine.
+  Income Engine (B2):         40% QQQI / 35% SPYI / 10% BTCI / 15% IAUI. DRIP OFF.
+  Growth (B3):                VOO/QQQM/GOOGL/VXUS/SMH (b3_start=0 for Scenario C).
+
+Quarterly reinvestment note:
+  The sim uses annual steps. Quarterly vs immediate reinvestment produces identical
+  year-end balances because all surplus is invested in Income Engine by Dec 31 either
+  way. The only unmodeled cost is the opportunity cost of surplus sitting in SPAXX
+  for ~7.5 months on average (~$3k/yr on Scenario A) — already excluded since the
+  sim doesn't model within-year compounding of surplus.
 
 Spending rules (income-based, no NAV cuts):
   Income > 1.5× spend target → snap to 100% of spend target
   Income > 1.3× current spend  → step up 15-25% toward spend target
   Income >= current spend       → 3% raise, capped at spend target
-  Income < current spend        → hold spend, B1 bridges monthly gap
-  Only cut if B1 < 3mo spend AND income < 70% of spend (genuine crisis)
+  Income < current spend        → hold spend, Reserve bridges monthly gap
+  Only cut if Reserve < 3mo spend AND income < 70% of spend (genuine crisis)
 
-B1 bridge: each month, if income < spend, B1 auto-covers the shortfall.
-B1 redirect: only when B1 > target × 3 (rarely triggers).
-B1 target: spend × 3.0 (Reserve = 3× annual spend)
-
-SGOV: mean-reverting to 1.5% long-run (starts 4%, speed=0.3, vol=0.8%, floor=0%).
-B3 harvest: income declined AND income < 2× spend AND B3 > $200k.
+Reserve target: spend × 3.0
+SPAXX: mean-reverting to 1.5% long-run (starts 4%, speed=0.3, vol=0.8%, floor=0%).
+Growth harvest: income declined AND income < 2× spend AND Growth > $200k.
 
 Tax: California single filer, actual NEOS ROC percentages.
 """
