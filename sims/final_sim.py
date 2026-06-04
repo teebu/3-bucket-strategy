@@ -24,7 +24,7 @@ Spending rules (income-based, no NAV cuts):
 
 Reserve target: spend × 3.0
 SPAXX: mean-reverting to 1.5% long-run (starts 4%, speed=0.3, vol=0.8%, floor=0%).
-Growth harvest: income declined AND income < 2× spend AND Growth > $200k.
+Growth harvest: income declined >5% AND income < 2× spend AND Growth > $200k AND within 15% of ATH.
 
 Tax: California single filer, actual NEOS ROC percentages.
 """

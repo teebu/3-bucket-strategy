@@ -122,13 +122,13 @@ def yields(vix, cvix):
     }
 
 
-def run(b2_start, spend_start, label):
+def run(b2_start, spend_start, label, b3_start=200_000):
     B1_START = spend_start * 3.0
-    B3_START = 200_000
 
     b2       = float(b2_start)
     b1       = float(B1_START)
-    b3       = float(B3_START)
+    b3       = float(b3_start)
+    b3_ath   = float(b3_start)   # all-time high for Growth (harvest condition 4)
     sp       = float(spend_start)
     orig_tgt = float(spend_start)
     basis    = {k: b2_start * COMP[k] for k in COMP}
@@ -162,6 +162,7 @@ def run(b2_start, spend_start, label):
 
         # B3 follows equity directly (no covered-call cushion)
         b3 = max(0.0, b3 * (1.0 + eq))
+        b3_ath = max(b3_ath, b3)   # update ATH after nav change
 
         # B2 NAV
         nav = b2_nav_change(eq, gold, yr)
@@ -171,9 +172,12 @@ def run(b2_start, spend_start, label):
         yld = yields(vix, cvix)
         inc = sum(b2 * COMP[k] * yld[k] for k in COMP)
 
-        # B3 harvest: income declined AND income < 2× spend AND B3 > $200k
+        # B3 harvest: all four conditions from rulebook
+        #   1. income declined  2. income < 2× spend  3. B3 > $200k
+        #   4. Growth within 15% of ATH (no selling into depressed market)
         notes = []
-        if inc < prev_inc and inc < 2.0 * sp and b3 > 200_000:
+        if (inc < prev_inc and inc < 2.0 * sp
+                and b3 > 200_000 and b3 >= b3_ath * 0.85):
             g = (b3 - 200_000) * 0.75
             b3 -= g; b2 += g
             inc = sum(b2 * COMP[k] * yld[k] for k in COMP)
@@ -272,5 +276,6 @@ if __name__ == '__main__':
     print('This is the worst historically documented developed-market environment.')
     print()
 
-    run(700_000,   60_000,  'Scenario A  $60k/yr   B2=$700k   B1=$120k  Total=$1,020k')
-    run(1_350_000, 100_000, 'Scenario B  $100k/yr  B2=$1.35M  B1=$200k  Total=$1,750k')
+    run(700_000,   60_000,  'Scenario A  $60k/yr   B2=$700k   B1=$180k  Total=$1,080k')
+    run(1_350_000, 100_000, 'Scenario B  $100k/yr  B2=$1.35M  B1=$300k  Total=$1,850k')
+    run(100_000,   8_400,   'Scenario C  $8,400/yr B2=$100k   B1=$25.2k Total=$125.2k', b3_start=0)
