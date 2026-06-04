@@ -1,0 +1,5028 @@
+<!doctype html>
+
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>3-Bucket Retirement Strategy</title>
+
+    <style>
+      :root {
+        --navy: #1a3a5c;
+
+        --navy-light: #2a5298;
+
+        --navy-pale: #e8eef5;
+
+        --white: #ffffff;
+
+        --gray-50: #f8fafc;
+
+        --gray-100: #f1f5f9;
+
+        --gray-200: #e2e8f0;
+
+        --gray-400: #94a3b8;
+
+        --gray-600: #475569;
+
+        --gray-900: #0f172a;
+
+        --green: #16a34a;
+
+        --green-bg: #f0fdf4;
+
+        --amber: #d97706;
+
+        --amber-bg: #fffbeb;
+
+        --red: #dc2626;
+
+        --red-bg: #fef2f2;
+
+        --orange: #ea580c;
+
+        --orange-bg: #fff7ed;
+
+        --sidebar-w: 240px;
+
+        --font: "Segoe UI", system-ui, -apple-system, sans-serif;
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        font-family: var(--font);
+
+        font-size: 15px;
+
+        line-height: 1.6;
+
+        color: var(--gray-900);
+
+        background: var(--white);
+
+        display: flex;
+      }
+
+      /* ── Sidebar ── */
+
+      #sidebar {
+        width: var(--sidebar-w);
+
+        min-height: 100vh;
+
+        background: var(--navy);
+
+        position: fixed;
+
+        top: 0;
+        left: 0;
+
+        overflow-y: auto;
+
+        z-index: 100;
+
+        display: flex;
+
+        flex-direction: column;
+      }
+
+      .sidebar-brand {
+        padding: 24px 20px 20px;
+
+        border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+      }
+
+      .sidebar-brand h2 {
+        color: white;
+
+        font-size: 13px;
+
+        font-weight: 700;
+
+        letter-spacing: 0.08em;
+
+        text-transform: uppercase;
+
+        line-height: 1.3;
+      }
+
+      .sidebar-brand p {
+        color: rgba(255, 255, 255, 0.55);
+
+        font-size: 11px;
+
+        margin-top: 4px;
+      }
+
+      .sidebar-nav {
+        padding: 16px 0;
+        flex: 1;
+      }
+
+      .nav-label {
+        padding: 8px 20px 4px;
+
+        font-size: 10px;
+
+        font-weight: 700;
+
+        letter-spacing: 0.1em;
+
+        text-transform: uppercase;
+
+        color: rgba(255, 255, 255, 0.35);
+      }
+
+      .nav-link {
+        display: block;
+
+        padding: 8px 20px;
+
+        color: rgba(255, 255, 255, 0.7);
+
+        text-decoration: none;
+
+        font-size: 13px;
+
+        border-left: 3px solid transparent;
+
+        transition: all 0.15s;
+      }
+
+      .nav-link:hover {
+        color: white;
+        background: rgba(255, 255, 255, 0.08);
+      }
+
+      .nav-link.active {
+        color: white;
+        border-left-color: #60a5fa;
+        background: rgba(96, 165, 250, 0.12);
+      }
+
+      .sidebar-footer {
+        padding: 16px 20px;
+
+        border-top: 1px solid rgba(255, 255, 255, 0.12);
+      }
+
+      #print-btn {
+        width: 100%;
+
+        padding: 8px 12px;
+
+        background: rgba(255, 255, 255, 0.1);
+
+        border: 1px solid rgba(255, 255, 255, 0.2);
+
+        border-radius: 6px;
+
+        color: rgba(255, 255, 255, 0.8);
+
+        font-size: 12px;
+
+        cursor: pointer;
+
+        transition: all 0.15s;
+
+        font-family: var(--font);
+      }
+
+      #print-btn:hover {
+        background: rgba(255, 255, 255, 0.18);
+        color: white;
+      }
+
+      /* ── Main ── */
+
+      #main {
+        margin-left: var(--sidebar-w);
+
+        flex: 1;
+
+        max-width: 900px;
+
+        padding: 48px 56px;
+      }
+
+      /* ── Header ── */
+
+      .page-header {
+        margin-bottom: 48px;
+
+        padding-bottom: 32px;
+
+        border-bottom: 2px solid var(--navy);
+      }
+
+      .page-header h1 {
+        font-size: 32px;
+
+        font-weight: 700;
+
+        color: var(--navy);
+
+        letter-spacing: -0.02em;
+
+        line-height: 1.2;
+      }
+
+      .page-header .subtitle {
+        margin-top: 8px;
+
+        font-size: 16px;
+
+        color: var(--gray-600);
+      }
+
+      .header-stats {
+        display: flex;
+
+        gap: 32px;
+
+        margin-top: 24px;
+      }
+
+      .stat {
+        text-align: center;
+
+        padding: 16px 24px;
+
+        background: var(--navy);
+
+        border-radius: 8px;
+
+        color: white;
+      }
+
+      .stat-value {
+        font-size: 22px;
+
+        font-weight: 700;
+
+        line-height: 1;
+      }
+
+      .stat-label {
+        font-size: 11px;
+
+        opacity: 0.7;
+
+        margin-top: 4px;
+
+        text-transform: uppercase;
+
+        letter-spacing: 0.05em;
+      }
+
+      /* ── Sections ── */
+
+      section {
+        margin-bottom: 56px;
+
+        scroll-margin-top: 24px;
+      }
+
+      section h2 {
+        font-size: 20px;
+
+        font-weight: 700;
+
+        color: var(--navy);
+
+        margin-bottom: 20px;
+
+        padding-bottom: 10px;
+
+        border-bottom: 1px solid var(--gray-200);
+
+        display: flex;
+
+        align-items: center;
+
+        gap: 10px;
+      }
+
+      .section-num {
+        display: inline-flex;
+
+        align-items: center;
+
+        justify-content: center;
+
+        width: 28px;
+        height: 28px;
+
+        background: var(--navy);
+
+        color: white;
+
+        border-radius: 50%;
+
+        font-size: 13px;
+
+        font-weight: 700;
+
+        flex-shrink: 0;
+      }
+
+      /* ── Tables ── */
+
+      table {
+        width: 100%;
+
+        border-collapse: collapse;
+
+        font-size: 14px;
+
+        margin-bottom: 16px;
+      }
+
+      thead th {
+        background: var(--navy);
+
+        color: white;
+
+        padding: 10px 14px;
+
+        text-align: left;
+
+        font-size: 12px;
+
+        font-weight: 600;
+
+        letter-spacing: 0.04em;
+
+        text-transform: uppercase;
+      }
+
+      thead th:first-child {
+        border-radius: 6px 0 0 0;
+      }
+
+      thead th:last-child {
+        border-radius: 0 6px 0 0;
+      }
+
+      tbody tr {
+        border-bottom: 1px solid var(--gray-200);
+      }
+
+      tbody tr:nth-child(even) {
+        background: var(--gray-50);
+      }
+
+      tbody tr:hover {
+        background: var(--navy-pale);
+      }
+
+      tbody td {
+        padding: 10px 14px;
+      }
+
+      tfoot td {
+        padding: 10px 14px;
+
+        font-weight: 600;
+
+        background: var(--gray-100);
+
+        font-size: 13px;
+      }
+
+      .bucket-b1 {
+        color: var(--amber);
+        font-weight: 700;
+      }
+
+      .bucket-b2 {
+        color: var(--navy-light);
+        font-weight: 700;
+      }
+
+      .bucket-b3 {
+        color: var(--green);
+        font-weight: 700;
+      }
+
+      .amount {
+        font-variant-numeric: tabular-nums;
+        font-weight: 600;
+      }
+
+      .pct {
+        color: var(--gray-600);
+        font-size: 13px;
+      }
+
+      /* ── Bucket cards ── */
+
+      .bucket-cards {
+        display: grid;
+
+        grid-template-columns: repeat(3, 1fr);
+
+        gap: 16px;
+
+        margin-bottom: 8px;
+      }
+
+      .bucket-card {
+        border: 1px solid var(--gray-200);
+
+        border-radius: 10px;
+
+        padding: 20px;
+
+        position: relative;
+
+        overflow: hidden;
+      }
+
+      .bucket-card::before {
+        content: "";
+
+        position: absolute;
+
+        top: 0;
+        left: 0;
+        right: 0;
+
+        height: 4px;
+      }
+
+      .bucket-card.b1::before {
+        background: var(--amber);
+      }
+
+      .bucket-card.b2::before {
+        background: var(--navy-light);
+      }
+
+      .bucket-card.b3::before {
+        background: var(--green);
+      }
+
+      .card-tag {
+        font-size: 11px;
+
+        font-weight: 700;
+
+        letter-spacing: 0.08em;
+
+        text-transform: uppercase;
+
+        margin-bottom: 6px;
+      }
+
+      .b1 .card-tag {
+        color: var(--amber);
+      }
+
+      .b2 .card-tag {
+        color: var(--navy-light);
+      }
+
+      .b3 .card-tag {
+        color: var(--green);
+      }
+
+      .card-name {
+        font-size: 15px;
+
+        font-weight: 700;
+
+        color: var(--gray-900);
+
+        margin-bottom: 8px;
+      }
+
+      .card-desc {
+        font-size: 13px;
+
+        color: var(--gray-600);
+
+        line-height: 1.5;
+      }
+
+      .card-drip {
+        margin-top: 12px;
+
+        display: inline-flex;
+
+        align-items: center;
+
+        gap: 5px;
+
+        font-size: 11px;
+
+        font-weight: 700;
+
+        padding: 3px 8px;
+
+        border-radius: 12px;
+
+        letter-spacing: 0.04em;
+      }
+
+      .drip-on {
+        background: #dcfce7;
+        color: #15803d;
+      }
+
+      .drip-off {
+        background: #fee2e2;
+        color: #b91c1c;
+      }
+
+      /* ── Code block ── */
+
+      /* ── Monthly Ops ── */
+
+      .monthly-grid {
+        display: grid;
+
+        grid-template-columns: 1fr 1fr;
+
+        gap: 16px;
+
+        margin-bottom: 16px;
+      }
+
+      .monthly-card {
+        border: 1px solid var(--gray-200);
+
+        border-radius: 8px;
+
+        overflow: hidden;
+      }
+
+      .monthly-card-head {
+        padding: 9px 14px;
+
+        font-size: 11px;
+
+        font-weight: 700;
+
+        letter-spacing: 0.07em;
+
+        text-transform: uppercase;
+      }
+
+      .monthly-card-head.auto {
+        background: var(--gray-100);
+        color: var(--gray-600);
+      }
+
+      .monthly-card-head.manual {
+        background: var(--navy);
+        color: white;
+      }
+
+      .monthly-card-body {
+        padding: 12px 14px;
+      }
+
+      .monthly-row {
+        display: flex;
+
+        align-items: center;
+
+        gap: 8px;
+
+        padding: 5px 0;
+
+        font-size: 13px;
+
+        border-bottom: 1px solid var(--gray-100);
+      }
+
+      .monthly-row:last-child {
+        border-bottom: none;
+      }
+
+      .monthly-asset {
+        font-weight: 700;
+
+        color: var(--navy);
+
+        min-width: 60px;
+
+        font-size: 13px;
+      }
+
+      .monthly-arrow {
+        color: var(--gray-400);
+        font-size: 12px;
+        flex-shrink: 0;
+      }
+
+      .monthly-dest {
+        color: var(--gray-600);
+        font-size: 13px;
+        flex: 1;
+      }
+
+      .monthly-badge {
+        font-size: 10px;
+
+        font-weight: 700;
+
+        padding: 2px 7px;
+
+        border-radius: 10px;
+
+        white-space: nowrap;
+      }
+
+      .badge-drip {
+        background: #dcfce7;
+        color: #15803d;
+      }
+
+      .badge-cash {
+        background: #dbeafe;
+        color: #1e40af;
+      }
+
+      .monthly-example {
+        background: #0f172a;
+
+        border-radius: 8px;
+
+        padding: 18px 20px;
+
+        font-family: "Cascadia Code", "Fira Code", "Courier New", monospace;
+
+        font-size: 13px;
+
+        line-height: 1.9;
+
+        color: #e2e8f0;
+
+        white-space: pre-wrap;
+      }
+
+      .ex-comment {
+        color: #475569;
+      }
+
+      .ex-arrow {
+        color: #60a5fa;
+      }
+
+      .ex-dollar {
+        color: #34d399;
+        font-weight: 600;
+      }
+
+      .ex-label {
+        color: #94a3b8;
+      }
+
+      /* ── Spending philosophy ── */
+
+      .spend-guide {
+        display: grid;
+
+        grid-template-columns: repeat(3, 1fr);
+
+        gap: 12px;
+
+        margin-top: 16px;
+      }
+
+      .spend-item {
+        padding: 14px 16px;
+
+        border-radius: 8px;
+
+        border: 1px solid var(--gray-200);
+
+        text-align: center;
+      }
+
+      .spend-item .spend-pct {
+        font-size: 24px;
+
+        font-weight: 800;
+
+        line-height: 1;
+
+        margin-bottom: 4px;
+      }
+
+      .spend-item .spend-label {
+        font-size: 13px;
+        color: var(--gray-600);
+      }
+
+      .spend-item.big .spend-pct {
+        color: var(--navy);
+      }
+
+      .spend-item.normal .spend-pct {
+        color: var(--green);
+      }
+
+      .spend-item.quiet .spend-pct {
+        color: var(--amber);
+      }
+
+      .callout {
+        padding: 14px 18px;
+
+        border-radius: 8px;
+
+        border-left: 4px solid;
+
+        font-size: 14px;
+
+        margin-bottom: 16px;
+      }
+
+      .callout.green {
+        background: var(--green-bg);
+        border-color: var(--green);
+        color: #15803d;
+      }
+
+      .callout.navy {
+        background: var(--navy-pale);
+        border-color: var(--navy);
+        color: var(--navy);
+      }
+
+      /* ── Stepper ── */
+
+      .stepper {
+        display: flex;
+        flex-direction: column;
+        gap: 0;
+      }
+
+      .step {
+        display: flex;
+
+        gap: 16px;
+
+        position: relative;
+      }
+
+      .step:not(:last-child)::after {
+        content: "";
+
+        position: absolute;
+
+        left: 15px;
+
+        top: 32px;
+
+        bottom: 0;
+
+        width: 2px;
+
+        background: var(--gray-200);
+      }
+
+      .step-num {
+        width: 32px;
+        height: 32px;
+
+        background: var(--navy);
+
+        color: white;
+
+        border-radius: 50%;
+
+        display: flex;
+
+        align-items: center;
+
+        justify-content: center;
+
+        font-size: 13px;
+
+        font-weight: 700;
+
+        flex-shrink: 0;
+
+        z-index: 1;
+      }
+
+      .step-body {
+        padding: 4px 0 24px;
+
+        flex: 1;
+      }
+
+      .step-title {
+        font-size: 15px;
+
+        font-weight: 700;
+
+        color: var(--gray-900);
+
+        margin-bottom: 8px;
+      }
+
+      .step-content {
+        font-size: 13.5px;
+        color: var(--gray-600);
+        line-height: 1.6;
+      }
+
+      .step-content strong {
+        color: var(--gray-900);
+      }
+
+      .guardrail-table {
+        margin-top: 10px;
+
+        width: 100%;
+
+        font-size: 13px;
+
+        border-radius: 6px;
+
+        overflow: hidden;
+
+        border: 1px solid var(--gray-200);
+      }
+
+      .guardrail-table tr {
+        border-bottom: 1px solid var(--gray-200);
+      }
+
+      .guardrail-table tr:last-child {
+        border: none;
+      }
+
+      .guardrail-table td {
+        padding: 8px 12px;
+      }
+
+      .guardrail-table td:first-child {
+        font-family: monospace;
+        font-size: 12px;
+        background: var(--gray-50);
+        width: 110px;
+      }
+
+      .gr-green {
+        color: var(--green);
+        font-weight: 700;
+      }
+
+      .gr-amber {
+        color: var(--amber);
+        font-weight: 700;
+      }
+
+      .gr-red {
+        color: var(--red);
+        font-weight: 700;
+      }
+
+      .gr-blue {
+        color: var(--navy-light);
+        font-weight: 700;
+      }
+
+      /* ── Bear alerts ── */
+
+      .bear-alerts {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .bear-alert {
+        border-radius: 8px;
+
+        padding: 16px 20px;
+
+        border: 1px solid;
+
+        display: grid;
+
+        grid-template-columns: auto 1fr;
+
+        gap: 12px;
+
+        align-items: start;
+      }
+
+      .bear-alert.yellow {
+        background: var(--amber-bg);
+        border-color: #fcd34d;
+      }
+
+      .bear-alert.orange {
+        background: var(--orange-bg);
+        border-color: #fb923c;
+      }
+
+      .bear-alert.red {
+        background: var(--red-bg);
+        border-color: #fca5a5;
+      }
+
+      .bear-alert.critical {
+        background: #fdf2f8;
+        border-color: #f0abfc;
+      }
+
+      .bear-badge {
+        font-size: 11px;
+
+        font-weight: 800;
+
+        padding: 3px 10px;
+
+        border-radius: 12px;
+
+        white-space: nowrap;
+
+        letter-spacing: 0.04em;
+
+        text-transform: uppercase;
+      }
+
+      .yellow .bear-badge {
+        background: #fef3c7;
+        color: #92400e;
+        border: 1px solid #fcd34d;
+      }
+
+      .orange .bear-badge {
+        background: #ffedd5;
+        color: #9a3412;
+        border: 1px solid #fb923c;
+      }
+
+      .red .bear-badge {
+        background: #fee2e2;
+        color: #991b1b;
+        border: 1px solid #fca5a5;
+      }
+
+      .critical .bear-badge {
+        background: #fdf4ff;
+        color: #701a75;
+        border: 1px solid #e879f9;
+      }
+
+      .bear-text {
+        font-size: 13.5px;
+        line-height: 1.5;
+      }
+
+      .bear-text strong {
+        display: block;
+        margin-bottom: 2px;
+        font-size: 14px;
+      }
+
+      /* ── Checklist ── */
+
+      .checklist {
+        display: flex;
+
+        flex-direction: column;
+
+        border: 1px solid var(--gray-200);
+
+        border-radius: 10px;
+
+        overflow: hidden;
+      }
+
+      .checklist-header {
+        background: var(--navy);
+
+        color: white;
+
+        padding: 14px 20px;
+
+        display: flex;
+
+        justify-content: space-between;
+
+        align-items: center;
+
+        gap: 12px;
+      }
+
+      .cl-header-left {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex: 1;
+        flex-wrap: wrap;
+      }
+
+      .cl-year-input {
+        background: rgba(255, 255, 255, 0.15);
+
+        border: 1px solid rgba(255, 255, 255, 0.3);
+
+        border-radius: 4px;
+
+        color: white;
+
+        font-size: 12px;
+
+        padding: 3px 8px;
+
+        width: 90px;
+
+        font-family: var(--font);
+      }
+
+      .cl-year-input::placeholder {
+        color: rgba(255, 255, 255, 0.45);
+      }
+
+      #reset-btn {
+        font-size: 12px;
+
+        padding: 5px 12px;
+
+        background: rgba(255, 255, 255, 0.12);
+
+        border: 1px solid rgba(255, 255, 255, 0.25);
+
+        border-radius: 4px;
+
+        color: rgba(255, 255, 255, 0.85);
+
+        cursor: pointer;
+
+        font-family: var(--font);
+
+        white-space: nowrap;
+      }
+
+      #reset-btn:hover {
+        background: rgba(255, 255, 255, 0.22);
+        color: white;
+      }
+
+      /* Check items */
+
+      .cl-item {
+        border-bottom: 1px solid var(--gray-200);
+
+        transition: background 0.1s;
+      }
+
+      .cl-item:last-child {
+        border-bottom: none;
+      }
+
+      .cl-item.done {
+        background: var(--green-bg);
+      }
+
+      .cl-item.skipped {
+        opacity: 0.45;
+        pointer-events: none;
+      }
+
+      .cl-top {
+        display: flex;
+
+        align-items: flex-start;
+
+        gap: 12px;
+
+        padding: 14px 20px 0;
+      }
+
+      .cl-check {
+        width: 20px;
+        height: 20px;
+
+        accent-color: var(--navy);
+
+        cursor: pointer;
+
+        flex-shrink: 0;
+
+        margin-top: 2px;
+      }
+
+      .cl-num {
+        width: 24px;
+        height: 24px;
+
+        background: var(--navy);
+
+        color: white;
+
+        border-radius: 50%;
+
+        display: flex;
+
+        align-items: center;
+
+        justify-content: center;
+
+        font-size: 11px;
+
+        font-weight: 700;
+
+        flex-shrink: 0;
+      }
+
+      .cl-title {
+        font-size: 14px;
+
+        font-weight: 700;
+
+        color: var(--navy);
+
+        line-height: 1.4;
+
+        flex: 1;
+      }
+
+      .cl-subtitle {
+        font-size: 12px;
+
+        color: var(--gray-400);
+
+        font-weight: 400;
+
+        margin-left: 4px;
+      }
+
+      .cl-body {
+        padding: 10px 20px 16px 56px;
+      }
+
+      /* Input rows */
+
+      .cl-inputs {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-bottom: 12px;
+      }
+
+      .cl-field {
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+        min-width: 140px;
+      }
+
+      .cl-field label {
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--gray-600);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+
+      .cl-field input[type="number"],
+      .cl-field input[type="text"],
+      .cl-field select {
+        padding: 7px 10px;
+
+        border: 1px solid var(--gray-200);
+
+        border-radius: 6px;
+
+        font-size: 13px;
+
+        font-family: var(--font);
+
+        color: var(--gray-900);
+
+        background: white;
+
+        transition: border-color 0.15s;
+
+        outline: none;
+      }
+
+      .cl-field input:focus,
+      .cl-field select:focus {
+        border-color: var(--navy);
+        box-shadow: 0 0 0 2px var(--navy-pale);
+      }
+
+      .cl-field input[type="number"] {
+        width: 150px;
+      }
+
+      .cl-field.wide input {
+        width: 200px;
+      }
+
+      /* Radio groups */
+
+      .cl-radios {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+
+      .cl-radio-btn {
+        display: flex;
+
+        align-items: center;
+
+        gap: 6px;
+
+        padding: 6px 12px;
+
+        border: 1px solid var(--gray-200);
+
+        border-radius: 6px;
+
+        cursor: pointer;
+
+        font-size: 13px;
+
+        transition: all 0.12s;
+
+        user-select: none;
+      }
+
+      .cl-radio-btn:has(input:checked) {
+        border-color: var(--navy);
+        background: var(--navy-pale);
+        color: var(--navy);
+        font-weight: 600;
+      }
+
+      .cl-radio-btn input {
+        accent-color: var(--navy);
+      }
+
+      /* Result boxes */
+
+      .cl-result {
+        border-radius: 7px;
+
+        padding: 10px 14px;
+
+        font-size: 13px;
+
+        line-height: 1.6;
+
+        margin-top: 4px;
+
+        display: none;
+      }
+
+      .cl-result.visible {
+        display: block;
+      }
+
+      .cl-result.green {
+        background: var(--green-bg);
+        border: 1px solid #bbf7d0;
+        color: #14532d;
+      }
+
+      .cl-result.amber {
+        background: var(--amber-bg);
+        border: 1px solid #fde68a;
+        color: #78350f;
+      }
+
+      .cl-result.orange {
+        background: var(--orange-bg);
+        border: 1px solid #fb923c;
+        color: #7c2d12;
+      }
+
+      .cl-result.red {
+        background: var(--red-bg);
+        border: 1px solid #fecaca;
+        color: #7f1d1d;
+      }
+
+      .cl-result.blue {
+        background: var(--navy-pale);
+        border: 1px solid #bfdbfe;
+        color: var(--navy);
+      }
+
+      .cl-result.gray {
+        background: var(--gray-100);
+        border: 1px solid var(--gray-200);
+        color: var(--gray-600);
+      }
+
+      .cl-result strong {
+        font-weight: 700;
+      }
+
+      .res-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 16px;
+      }
+
+      .res-item {
+        display: flex;
+        flex-direction: column;
+        gap: 1px;
+      }
+
+      .res-label {
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        opacity: 0.7;
+      }
+
+      .res-val {
+        font-size: 15px;
+        font-weight: 700;
+      }
+
+      /* ── Tax/risks ── */
+
+      .two-col {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+      }
+
+      .info-card {
+        background: var(--gray-50);
+
+        border: 1px solid var(--gray-200);
+
+        border-radius: 8px;
+
+        padding: 18px;
+      }
+
+      .info-card h4 {
+        font-size: 13px;
+
+        font-weight: 700;
+
+        text-transform: uppercase;
+
+        letter-spacing: 0.06em;
+
+        color: var(--navy);
+
+        margin-bottom: 10px;
+      }
+
+      .info-card ul {
+        padding-left: 16px;
+
+        font-size: 13px;
+
+        color: var(--gray-600);
+
+        line-height: 1.7;
+      }
+
+      .risk-item {
+        padding: 10px 14px;
+
+        border-radius: 6px;
+
+        font-size: 13px;
+
+        margin-bottom: 8px;
+
+        border-left: 3px solid;
+      }
+
+      .risk-item.warn {
+        background: var(--amber-bg);
+        border-color: var(--amber);
+        color: #78350f;
+      }
+
+      .risk-item strong {
+        display: block;
+        font-size: 13px;
+        margin-bottom: 2px;
+      }
+
+      /* ── Projection table ── */
+
+      .proj-note {
+        font-size: 12px;
+        color: var(--gray-400);
+        margin-top: 8px;
+        font-style: italic;
+      }
+
+      /* ── Footer ── */
+
+      footer {
+        margin-top: 64px;
+
+        padding-top: 24px;
+
+        border-top: 1px solid var(--gray-200);
+
+        text-align: center;
+
+        font-size: 12px;
+
+        color: var(--gray-400);
+
+        padding-bottom: 48px;
+      }
+
+      /* ── Global context bar ── */
+
+      .cl-global-bar {
+        background: var(--navy-pale);
+
+        border-bottom: 1px solid var(--gray-200);
+
+        padding: 10px 20px;
+
+        display: none;
+
+        flex-wrap: wrap;
+
+        gap: 24px;
+
+        align-items: center;
+      }
+
+      .cl-global-bar.visible {
+        display: flex;
+      }
+
+      .cl-global-item {
+        display: flex;
+        flex-direction: column;
+        gap: 1px;
+      }
+
+      .cl-global-label {
+        font-size: 10px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.07em;
+        color: var(--gray-600);
+      }
+
+      .cl-global-val {
+        font-size: 14px;
+        font-weight: 700;
+        color: var(--navy);
+      }
+
+      /* ── Print ── */
+
+      @media print {
+        #sidebar {
+          display: none !important;
+        }
+
+        #main {
+          margin-left: 0 !important;
+          padding: 24px !important;
+          max-width: 100% !important;
+        }
+
+        .bucket-cards {
+          grid-template-columns: repeat(3, 1fr) !important;
+        }
+
+        .two-col {
+          grid-template-columns: 1fr 1fr !important;
+        }
+
+        section {
+          page-break-inside: avoid;
+        }
+
+        .check-item:has(input:checked) {
+          background: white !important;
+        }
+      }
+
+      /* ── Mobile ── */
+
+      @media (max-width: 768px) {
+        #sidebar {
+          width: 100%;
+          height: auto;
+          min-height: auto;
+          position: relative;
+        }
+
+        #sidebar .sidebar-nav {
+          display: none;
+        }
+
+        #main {
+          margin-left: 0;
+          padding: 24px 20px;
+        }
+
+        .bucket-cards {
+          grid-template-columns: 1fr;
+        }
+
+        .two-col {
+          grid-template-columns: 1fr;
+        }
+
+        .header-stats {
+          flex-wrap: wrap;
+          gap: 12px;
+        }
+
+        .spend-guide {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <!-- Sidebar -->
+
+    <nav id="sidebar">
+      <div class="sidebar-brand">
+        <h2>3-Bucket Retirement Strategy</h2>
+
+        <p>Three Scenarios · A/$1.08M · B/$1.85M · C/$125k · 2026</p>
+      </div>
+
+      <div class="sidebar-nav">
+        <div class="nav-label">Overview</div>
+
+        <a class="nav-link active" href="#overview">Portfolio Allocation</a>
+
+        <a class="nav-link" href="#ca-tax">California Tax</a>
+
+        <a class="nav-link" href="#buckets">The Three Buckets</a>
+
+        <a class="nav-link" href="#monthly">Monthly Operations</a>
+
+        <a class="nav-label">Rules</a>
+
+        <a class="nav-link" href="#spending">Spending Philosophy</a>
+
+        <a class="nav-link" href="#discretionary">Discretionary Spending</a>
+
+        <a class="nav-link" href="#annual">Annual Review</a>
+
+<a class="nav-link" href="#bear">Bear Market Rules</a>
+
+        <a
+          class="nav-link"
+          href="#bear-monitor"
+          style="color: #fbbf24; font-weight: 700"
+          >⚡ Bear Market Monitor</a
+        >
+
+        <div class="nav-label">Reference</div>
+
+        <a class="nav-link" href="#projection">40-Year Projection</a>
+
+        <a class="nav-link" href="#checklist">Annual Checklist</a>
+
+        <a class="nav-link" href="#tax">Tax &amp; Risks</a>
+
+        <a class="nav-link" href="#test-portfolio">Scenario C ($100k)</a>
+
+        <a class="nav-link" href="#compare">vs 4% Rule</a>
+      </div>
+
+      <div class="sidebar-footer">
+        <button id="print-btn" onclick="window.print()">
+          ⎙ Print Rulebook
+        </button>
+      </div>
+    </nav>
+
+    <!-- Main Content -->
+
+    <main id="main">
+      <!-- Header -->
+
+      <div class="page-header">
+        <h1>3-Bucket Retirement Strategy</h1>
+
+        <p class="subtitle">
+          3-Bucket System — Optimized for Income &amp; Longevity
+        </p>
+
+        <p style="font-size:13px;color:var(--gray-600);margin-top:6px;">
+          Single, California — all projections after-tax
+        </p>
+
+        <div class="header-stats">
+          <div class="stat">
+            <div class="stat-value">14.35%</div>
+            <div class="stat-label">Inc. Engine Blended Yield</div>
+          </div>
+
+          <div class="stat">
+            <div class="stat-value">$1.08M</div>
+            <div class="stat-label">Scenario A Capital</div>
+          </div>
+
+          <div class="stat">
+            <div class="stat-value">$1.85M</div>
+            <div class="stat-label">Scenario B Capital</div>
+          </div>
+
+          <div class="stat">
+            <div class="stat-value">100%</div>
+            <div class="stat-label">40-yr Success A (after CA tax)</div>
+          </div>
+
+          <div class="stat">
+            <div class="stat-value">100%</div>
+            <div class="stat-label">40-yr Success B (after CA tax)</div>
+          </div>
+
+          <div class="stat">
+            <div class="stat-value">100%</div>
+            <div class="stat-label">40-yr Success C — $125k test</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ALLOCATION -->
+
+      <section id="overview">
+        <h2>Portfolio Allocation</h2>
+
+        <p style="font-size:13px;color:var(--gray-600);margin-bottom:16px">
+          Income Engine composition: <strong>QQQI 40%</strong> (14.11% yield) · <strong>SPYI 35%</strong> (12.09% yield) · <strong>BTCI 10%</strong> (26.36% yield) · <strong>IAUI 15%</strong> (12.27% yield) · Blended yield <strong>14.35%</strong>
+        </p>
+
+        <p style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:8px">Scenario A — $60,000/yr spend</p>
+        <table>
+          <thead>
+            <tr><th>Bucket</th><th>Asset</th><th>Amount</th><th>%</th><th>Role</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="bucket-b1">Reserve</span></td>
+              <td>SPAXX</td><td class="amount">$180,000</td><td class="pct">16.7%</td>
+              <td>Reserve — 3× annual spend</td>
+            </tr>
+            <tr>
+              <td><span class="bucket-b2">Inc. Engine</span></td>
+              <td>QQQI</td><td class="amount">$280,000</td><td class="pct">27.5%</td>
+              <td>Nasdaq-100 covered calls — 40% of Income Engine</td>
+            </tr>
+            <tr>
+              <td><span class="bucket-b2">Inc. Engine</span></td>
+              <td>SPYI</td><td class="amount">$245,000</td><td class="pct">24.0%</td>
+              <td>S&amp;P 500 covered calls — 35% of Income Engine</td>
+            </tr>
+            <tr>
+              <td><span class="bucket-b2">Inc. Engine</span></td>
+              <td>BTCI</td><td class="amount">$70,000</td><td class="pct">6.9%</td>
+              <td>Bitcoin covered calls — 10% of Income Engine</td>
+            </tr>
+            <tr>
+              <td><span class="bucket-b2">Inc. Engine</span></td>
+              <td>IAUI</td><td class="amount">$105,000</td><td class="pct">10.3%</td>
+              <td>Gold covered calls — 15% of Income Engine</td>
+            </tr>
+            <tr>
+              <td><span class="bucket-b3">Growth</span></td>
+              <td>VOO</td><td class="amount">$80,000</td><td class="pct">7.8%</td>
+              <td>S&amp;P 500 core — DRIP ON</td>
+            </tr>
+            <tr>
+              <td><span class="bucket-b3">Growth</span></td>
+              <td>QQQM</td><td class="amount">$40,000</td><td class="pct">3.9%</td>
+              <td>Nasdaq-100 growth — DRIP ON</td>
+            </tr>
+            <tr>
+              <td><span class="bucket-b3">Growth</span></td>
+              <td>GOOGL</td><td class="amount">$40,000</td><td class="pct">3.9%</td>
+              <td>Mega-cap tech — DRIP N/A (no dividend)</td>
+            </tr>
+            <tr>
+              <td><span class="bucket-b3">Growth</span></td>
+              <td>VXUS</td><td class="amount">$20,000</td><td class="pct">2.0%</td>
+              <td>International diversification — DRIP ON</td>
+            </tr>
+            <tr>
+              <td><span class="bucket-b3">Growth</span></td>
+              <td>SMH</td><td class="amount">$20,000</td><td class="pct">2.0%</td>
+              <td>Semiconductor satellite — DRIP ON (cap 10%)</td>
+            </tr>
+          </tbody>
+          <tfoot>
+            <tr>
+              <td colspan="2"><strong>Total</strong></td>
+              <td class="amount"><strong>$1,080,000</strong></td>
+              <td colspan="2">Year-1 income $100,450/yr ($8,371/mo) · Tax ~$0 (ROC defers almost everything) · Net reinvest $3,371/mo · 40-yr success 100%</td>
+            </tr>
+          </tfoot>
+        </table>
+
+        <p style="font-size:13px;font-weight:700;color:var(--navy);margin:20px 0 8px">Scenario B — $100,000/yr spend</p>
+        <table>
+          <thead>
+            <tr><th>Bucket</th><th>Asset</th><th>Amount</th><th>%</th><th>Role</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="bucket-b1">Reserve</span></td>
+              <td>SPAXX</td><td class="amount">$300,000</td><td class="pct">16.2%</td>
+              <td>Reserve — 3× annual spend</td>
+            </tr>
+            <tr>
+              <td><span class="bucket-b2">Inc. Engine</span></td>
+              <td>QQQI</td><td class="amount">$540,000</td><td class="pct">30.9%</td>
+              <td>Nasdaq-100 covered calls — 40% of Income Engine</td>
+            </tr>
+            <tr>
+              <td><span class="bucket-b2">Inc. Engine</span></td>
+              <td>SPYI</td><td class="amount">$472,500</td><td class="pct">27.0%</td>
+              <td>S&amp;P 500 covered calls — 35% of Income Engine</td>
+            </tr>
+            <tr>
+              <td><span class="bucket-b2">Inc. Engine</span></td>
+              <td>BTCI</td><td class="amount">$135,000</td><td class="pct">7.7%</td>
+              <td>Bitcoin covered calls — 10% of Income Engine</td>
+            </tr>
+            <tr>
+              <td><span class="bucket-b2">Inc. Engine</span></td>
+              <td>IAUI</td><td class="amount">$202,500</td><td class="pct">11.6%</td>
+              <td>Gold covered calls — 15% of Income Engine</td>
+            </tr>
+            <tr>
+              <td><span class="bucket-b3">Growth</span></td>
+              <td>VOO</td><td class="amount">$80,000</td><td class="pct">4.6%</td>
+              <td>S&amp;P 500 core — DRIP ON</td>
+            </tr>
+            <tr>
+              <td><span class="bucket-b3">Growth</span></td>
+              <td>QQQM</td><td class="amount">$40,000</td><td class="pct">2.3%</td>
+              <td>Nasdaq-100 growth — DRIP ON</td>
+            </tr>
+            <tr>
+              <td><span class="bucket-b3">Growth</span></td>
+              <td>GOOGL</td><td class="amount">$40,000</td><td class="pct">2.3%</td>
+              <td>Mega-cap tech — DRIP N/A (no dividend)</td>
+            </tr>
+            <tr>
+              <td><span class="bucket-b3">Growth</span></td>
+              <td>VXUS</td><td class="amount">$20,000</td><td class="pct">1.1%</td>
+              <td>International diversification — DRIP ON</td>
+            </tr>
+            <tr>
+              <td><span class="bucket-b3">Growth</span></td>
+              <td>SMH</td><td class="amount">$20,000</td><td class="pct">1.1%</td>
+              <td>Semiconductor satellite — DRIP ON (cap 10%)</td>
+            </tr>
+          </tbody>
+          <tfoot>
+            <tr>
+              <td colspan="2"><strong>Total</strong></td>
+              <td class="amount"><strong>$1,850,000</strong></td>
+              <td colspan="2">Year-1 income $193,725/yr ($16,144/mo) · Tax ~$0 (ROC defers almost everything) · Net reinvest $7,810/mo · 40-yr success 100%</td>
+            </tr>
+          </tfoot>
+        </table>
+
+        <p style="font-size:13px;font-weight:700;color:var(--navy);margin:20px 0 8px">Scenario C — $8,400/yr spend </p>
+        <table>
+          <thead>
+            <tr><th>Bucket</th><th>Asset</th><th>Amount</th><th>%</th><th>Role</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="bucket-b1">Reserve</span></td>
+              <td>SPAXX</td><td class="amount">$25,200</td><td class="pct">20.1%</td>
+              <td>Reserve — 3× annual spend ($700/mo)</td>
+            </tr>
+            <tr>
+              <td><span class="bucket-b2">Inc. Engine</span></td>
+              <td>QQQI</td><td class="amount">$40,000</td><td class="pct">34.3%</td>
+              <td>Nasdaq-100 covered calls — 40% of Income Engine</td>
+            </tr>
+            <tr>
+              <td><span class="bucket-b2">Inc. Engine</span></td>
+              <td>SPYI</td><td class="amount">$35,000</td><td class="pct">30.0%</td>
+              <td>S&amp;P 500 covered calls — 35% of Income Engine</td>
+            </tr>
+            <tr>
+              <td><span class="bucket-b2">Inc. Engine</span></td>
+              <td>BTCI</td><td class="amount">$10,000</td><td class="pct">8.6%</td>
+              <td>Bitcoin covered calls — 10% of Income Engine</td>
+            </tr>
+            <tr>
+              <td><span class="bucket-b2">Inc. Engine</span></td>
+              <td>IAUI</td><td class="amount">$15,000</td><td class="pct">12.8%</td>
+              <td>Gold covered calls — 15% of Income Engine</td>
+            </tr>
+            <tr>
+              <td><span class="bucket-b3">Growth</span></td>
+              <td>—</td><td class="amount">$0</td><td class="pct">0%</td>
+              <td>No Growth — income engine only</td>
+            </tr>
+          </tbody>
+          <tfoot>
+            <tr>
+              <td colspan="2"><strong>Total</strong></td>
+              <td class="amount"><strong>$125,200</strong></td>
+              <td colspan="2">Year-1 income $14,350/yr ($1,196/mo) · Tax ~$0 · Surplus $496/mo reinvested · 40-yr success 100%</td>
+            </tr>
+          </tfoot>
+        </table>
+
+        <div class="callout navy" style="margin-top:16px">
+          <strong>Scenario C spend rule of thumb (no Growth):</strong> Keep spend ≤ 70% of gross Income Engine income.
+          Below 70%, Income Engine compounds and the portfolio grows meaningfully. Above 80%, NAV erosion and
+          falling SPAXX rates outpace reinvestment and Income Engine slowly depletes in the median path.
+          Current setup: $8,400 / $14,350 = <strong>58.5% — well inside the safe zone.</strong>
+          <table style="margin-top:12px;width:100%">
+            <thead><tr><th>Spend / Income</th><th>Yr-40 median</th><th>Verdict</th></tr></thead>
+            <tbody>
+              <tr><td>≤ 60%</td><td>$5M+</td><td>Thriving</td></tr>
+              <tr><td>60–70%</td><td>$3–5M</td><td>Healthy</td></tr>
+              <tr><td>70–80%</td><td>$1–3M</td><td>Marginal</td></tr>
+              <tr><td>&gt; 80%</td><td>&lt; $500k</td><td>Income Engine eroding</td></tr>
+            </tbody>
+          </table>
+          <p style="margin-top:8px;margin-bottom:0;font-size:0.85em;opacity:0.8">SPAXX modeled at 1.5% long-run mean — conservative vs current 4%. For full scenarios A/B with Growth backstop, the threshold is looser.</p>
+        </div>
+      </section>
+
+      <!-- CALIFORNIA TAX -->
+
+      <section id="ca-tax">
+        <h2><span class="section-num" style="background:var(--navy-light)">CA</span> California Tax Treatment</h2>
+
+        <div class="callout green" style="margin-bottom:16px">
+          <strong>Year-1 effective tax rate: ~0%. Taxes stay near zero for years 1–8, then rise slowly to 5–9% long-run (median).</strong>
+          All projections in this rulebook are after federal + California tax using actual NEOS ROC percentages.
+        </div>
+
+        <div class="two-col" style="margin-bottom:16px">
+          <div class="info-card">
+            <h4>ROC Distribution Character (Actual Data)</h4>
+            <table style="margin-bottom:10px">
+              <thead>
+                <tr><th>ETF</th><th>ROC %</th><th>Ordinary Div</th><th>Tax in Year 1</th></tr>
+              </thead>
+              <tbody>
+                <tr><td><strong>QQQI</strong></td><td style="color:var(--green);font-weight:700">95.8%</td><td>4.2%</td><td style="color:var(--green);font-weight:600">~$0</td></tr>
+                <tr><td><strong>SPYI</strong></td><td style="color:var(--green);font-weight:700">93.9%</td><td>6.1%</td><td style="color:var(--green);font-weight:600">~$0</td></tr>
+                <tr><td><strong>BTCI</strong></td><td style="color:var(--green);font-weight:700">86.0%</td><td>14.0%</td><td style="color:var(--green);font-weight:600">~$0</td></tr>
+                <tr><td><strong>IAUI</strong></td><td style="color:var(--green);font-weight:700">~92%</td><td>8.0%</td><td style="color:var(--green);font-weight:600">~$0</td></tr>
+              </tbody>
+            </table>
+            <ul>
+              <li><strong>ROC is not currently taxable</strong> — it reduces your cost basis instead of being taxed now</li>
+              <li><strong>Tiny ordinary portion</strong> (~4–14%) is absorbed by the $15k federal + $4,803 CA standard deduction in early years</li>
+              <li><strong>Effective rate years 1–8: ~0%.</strong> Near-zero taxes while original-lot basis is positive</li>
+              <li><strong>LTCG phases in after year 8</strong> as original lots' basis depletes</li>
+              <li><strong>Reinvestment renews basis</strong> — each year's reinvestment creates fresh lots, keeping the zero-basis fraction well below 75%; heavy discretionary spending slows this</li>
+              <li><strong>Long-run effective rate: ~5–9%</strong> (median) — continuous reinvestment keeps zero-basis fraction low; heavy discretionary spending slows lot creation and can push rates to 15–20%</li>
+              <li><strong>At death: step-up eliminates ALL deferred gains</strong> — the entire liability disappears for heirs</li>
+            </ul>
+          </div>
+          <div class="info-card">
+            <h4>Effective Tax Rate Over Time</h4>
+            <table style="margin-bottom:0">
+              <thead>
+                <tr><th>Year</th><th>Effective Rate</th><th>Why</th></tr>
+              </thead>
+              <tbody>
+                <tr><td><strong>1</strong></td><td style="color:var(--green);font-weight:700">~0%</td><td>95%+ is ROC; tiny ordinary absorbed by std deduction</td></tr>
+                <tr><td><strong>5</strong></td><td style="color:var(--green);font-weight:700">~0%</td><td>Basis still depleting, very little taxable</td></tr>
+                <tr><td><strong>10</strong></td><td style="color:var(--green);font-weight:600">~0.3%</td><td>Original lots partially depleted, small LTCG begins</td></tr>
+                <tr><td><strong>15</strong></td><td style="color:var(--amber);font-weight:600">~2–4%</td><td>LTCG growing; reinvestment refreshing basis</td></tr>
+                <tr><td><strong>20+</strong></td><td style="color:var(--amber);font-weight:600">~5–9%</td><td>Steady state (median) — continuous reinvestment keeps zero-basis fraction low</td></tr>
+              </tbody>
+            </table>
+            <p style="font-size:12px;color:var(--gray-400);margin-top:8px">CA has no preferential LTCG rate — all eventually taxed as ordinary CA income (1–13.3%). Mental Health Services Tax +1% above $1M. NIIT federal only (3.8% above $200k). Quarterly estimated taxes: near $0 in early years. IRS Form 1040-ES + CA Form 540-ES due Jan 15, Apr 15, Jun 15, Sep 15.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- BUCKETS -->
+
+      <section id="buckets">
+        <h2>The Three Buckets</h2>
+
+        <div class="bucket-cards">
+          <div class="bucket-card b1">
+            <div class="card-tag">Reserve · SPAXX</div>
+
+            <div class="card-name">Monthly Spending Account &amp; Income Bridge</div>
+
+            <div class="card-desc">
+              Yield tracks the Fed Funds rate (currently ~4%; historically 0–5% — do not assume it stays high). Sized at 3× annual spend. Income Engine distributions flow into this account weekly via Fidelity's "withdraw only earnings" feature. Pay all bills from Reserve. Surplus above 3× spend is reinvested into Income Engine each quarter. In normal markets the Reserve balance stays stable. During crashes it bridges monthly shortfalls so spending never requires selling ETFs.
+            </div>
+
+            <div class="card-drip" style="background:#e0f2fe;color:#075985;margin-top:12px;display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;padding:3px 8px;border-radius:12px;letter-spacing:0.04em">⇄ AUTO-SWEEP via "withdraw only earnings"</div>
+          </div>
+
+          <div class="bucket-card b2">
+            <div class="card-tag">Bucket 2 · QQQI + SPYI + BTCI + IAUI</div>
+
+            <div class="card-name">Your Paycheck</div>
+
+            <div class="card-desc">
+              Generates monthly distributions to your brokerage cash account.
+              Surplus reinvests 40% QQQI / 35% SPYI / 10% BTCI / 15% IAUI. Never sell Income Engine — only
+              collect what it pays. Four volatility drivers: equity (QQQI/SPYI), crypto (BTCI), gold (IAUI).
+            </div>
+
+            <div class="card-drip drip-off">✗ DRIP OFF — take as cash</div>
+          </div>
+
+          <div class="bucket-card b3">
+            <div class="card-tag">Bucket 3 · VOO / QQQM / GOOGL / VXUS / SMH</div>
+
+            <div class="card-name">The Harvest Feeder</div>
+
+            <div class="card-desc">
+              Taxable, DRIP on for VOO, QQQM, VXUS, SMH. GOOGL pays no dividend — DRIP N/A, pure capital appreciation. SMH is capped at 10% of Growth. Harvest fires only if ALL FOUR true: income declined, income &lt; 2× spend, Growth &gt; $200k, AND Growth within 15% of its all-time high (prevents selling at a depressed bottom). Proceeds buy 40% QQQI / 35% SPYI / 10% BTCI / 15% IAUI. Expected: 2–4 events over 40 years.
+              <br /><br /><em>VOO / QQQM / GOOGL / VXUS / SMH are examples — Growth can be any growth investments you want. The mechanics (harvest trigger, liquidation order, DRIP) apply to whatever you hold here.</em>
+            </div>
+
+            <div class="card-drip drip-on">✓ DRIP ON (VOO / QQQM / VXUS / SMH)</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- MONTHLY -->
+
+      <section id="monthly">
+        <h2>Operations — Monthly &amp; Quarterly</h2>
+
+        <div class="callout navy" style="margin-bottom:20px">
+          <strong>3 Fidelity accounts:</strong> Reserve · Income Engine · Growth. One-time setup, then zero monthly decisions.
+        </div>
+
+        <!-- Account structure cards -->
+        <div class="two-col" style="margin-bottom:20px">
+          <div class="info-card">
+            <h4>Monthly — Zero Active Management</h4>
+            <p style="font-size:13px;color:var(--gray-600);line-height:1.7">
+              Distributions arrive in Income Engine → auto-transfer to Reserve weekly via "withdraw only earnings".<br><br>
+              Pay all bills from Reserve as normal.<br><br>
+              <strong>Nothing to do. No transfers to make, no decisions.</strong>
+            </p>
+          </div>
+          <div class="info-card">
+            <h4>Quarterly — 4× per year (Mar / Jun / Sep / Dec)</h4>
+            <p style="font-size:13px;color:var(--gray-600);line-height:1.7">
+              <strong>1. Check Reserve balance:</strong><br>
+              Investable surplus = Reserve − (3× annual spend)<br><br>
+              If surplus &gt; 0 → transfer to Income Engine, buy QQQI/SPYI/BTCI/IAUI in 40/35/10/15<br>
+              If surplus ≤ 0 → skip reinvestment, let Reserve rebuild<br><br>
+              <strong>2. Pay estimated tax:</strong> 25% of prior year's bill (near $0 in early years)
+            </p>
+          </div>
+        </div>
+
+        <!-- One-time setup -->
+        <div class="callout navy" style="margin-bottom:20px">
+          <strong>One-time setup:</strong><br>
+          Set QQQI / SPYI / BTCI / IAUI to <strong>DRIP OFF</strong> — enable "withdraw only earnings" weekly → Reserve<br>
+          Set VOO / QQQM / VXUS / SMH to <strong>DRIP ON</strong><br>
+          Done. No recurring transfers to configure.
+        </div>
+
+        <!-- Warning threshold pointer -->
+        <div style="margin-bottom:16px;padding:14px 18px;background:var(--amber-bg);border:1px solid #fde68a;border-radius:8px;">
+          <p style="font-size:13px;font-weight:700;color:#78350f;margin-bottom:4px">Reserve warning threshold (check any time you log in)</p>
+          <p style="font-size:13px;color:#78350f;margin-bottom:0">
+            Scenario A: Reserve &lt; $15,000 &nbsp;·&nbsp; Scenario B: Reserve &lt; $25,000 &nbsp;·&nbsp; Test: Reserve &lt; $2,100 (3 months of spend)<br>
+            If warning hit: skip reinvestment, consider 10% spend cut, check Growth harvest trigger.<br>
+            If Reserve depleted: sell Growth — VOO → QQQM → VXUS → GOOGL → SMH.
+          </p>
+        </div>
+
+        <!-- Year 1 example -->
+        <pre class="monthly-example"><span class="ex-comment">// Year 1 — quarterly snapshot (Scenario A / Scenario B)</span>
+
+<span class="ex-comment">// Income Engine auto-distributes to Reserve weekly (no action needed)</span>
+<span class="ex-label">Quarterly distributions:   </span>  <span class="ex-dollar">$25,779</span>   <span class="ex-comment">Scenario A ($103,113/yr ÷ 4)</span>
+<span class="ex-label">                           </span>  <span class="ex-dollar">$49,646</span>   <span class="ex-comment">Scenario B ($198,582/yr ÷ 4)</span>
+
+<span class="ex-comment">// Bills paid from Reserve all quarter (no action needed)</span>
+<span class="ex-label">Bills paid from Reserve:   </span>  <span class="ex-dollar">-$15,000</span>   <span class="ex-comment">Scenario A ($5,000/mo × 3)</span>
+<span class="ex-label">                           </span>  <span class="ex-dollar">-$25,000</span>   <span class="ex-comment">Scenario B ($8,333/mo × 3)</span>
+
+<span class="ex-comment">// Quarterly check — Reserve balance after 3 months</span>
+<span class="ex-label">Reserve balance:           </span>  <span class="ex-dollar">$190,779</span>   <span class="ex-comment">Scenario A (started at $180k)</span>
+<span class="ex-label">Reserve target (3× spend): </span>  <span class="ex-dollar">$180,000</span>   <span class="ex-comment">Scenario A</span>
+<span class="ex-label">Investable surplus:        </span>  <span class="ex-dollar"> $10,779</span>   <span class="ex-comment">Transfer to Income Engine</span>
+
+<span class="ex-comment">// Reinvest surplus 40/35/10/15 in Income Engine:</span>
+  <span class="ex-arrow">→</span> Buy QQQI:  <span class="ex-dollar">$4,312</span>   <span class="ex-comment">(40%)</span>
+  <span class="ex-arrow">→</span> Buy SPYI:  <span class="ex-dollar">$3,773</span>   <span class="ex-comment">(35%)</span>
+  <span class="ex-arrow">→</span> Buy BTCI:  <span class="ex-dollar">$1,078</span>   <span class="ex-comment">(10%)</span>
+  <span class="ex-arrow">→</span> Buy IAUI:  <span class="ex-dollar">$1,617</span>   <span class="ex-comment">(15%)</span>
+
+<span class="ex-comment">// Tax: ~$0 in year 1 — no quarterly payment needed</span>
+<span class="ex-comment">// January: apply annual review (spending rule, ratio check, etc.)</span></pre>
+      </section>
+
+      <!-- SPENDING -->
+
+      <section id="spending">
+        <h2>Spending Philosophy</h2>
+
+        <div class="callout green">
+          <strong>3%/yr static raise in every healthy year.</strong> No bonus raises. Compounding bonus raises accelerate spending faster than income can sustain and increase failure risk. 3% static keeps spending predictable and leaves the surplus compounding at 14.35%.
+        </div>
+
+        <p style="font-size: 14px; color: var(--gray-600); margin-bottom: 16px">
+          Every year you naturally spend below target is a free improvement — the saved surplus stays in Income Engine compounding. The guardrail rules (Annual Review) handle the downside.
+        </p>
+
+        <div class="spend-guide">
+          <div class="spend-item big">
+            <div class="spend-pct">3%</div>
+            <div class="spend-label" style="font-weight: 700; color: var(--navy); margin-bottom: 4px">Healthy Year</div>
+            <div class="spend-label">Health ratio ≥ 0.90 — raise spending 3%</div>
+          </div>
+
+          <div class="spend-item normal">
+            <div class="spend-pct">0%</div>
+            <div class="spend-label" style="font-weight: 700; color: var(--green); margin-bottom: 4px">Caution Year</div>
+            <div class="spend-label">Health ratio 0.75–0.90 — freeze spending, no raise</div>
+          </div>
+
+          <div class="spend-item quiet">
+            <div class="spend-pct">−15%</div>
+            <div class="spend-label" style="font-weight: 700; color: var(--amber); margin-bottom: 4px">Stress Year</div>
+            <div class="spend-label">Health ratio &lt; 0.75 — cut 15% (max 5 cuts lifetime)</div>
+          </div>
+        </div>
+
+        <p style="font-size:13px;color:var(--gray-600);margin-top:16px">
+          Year-40 spend if no cuts: Scenario A $60,000 × 1.03³⁹ = <strong>$195,722/yr</strong> · Scenario B $100,000 × 1.03³⁹ = <strong>$326,204/yr</strong>
+        </p>
+      </section>
+
+      <!-- DISCRETIONARY SPENDING -->
+
+      <section id="discretionary">
+        <h2>Discretionary Spending</h2>
+
+        <p style="font-size:15px;color:var(--gray-600);margin-bottom:20px;font-style:italic;">
+          How much can you take without hurting future income?
+        </p>
+
+        <div class="callout navy" style="margin-bottom:20px">
+          <strong>Formula:</strong><br><br>
+          <code style="font-family:'Cascadia Code','Fira Code','Courier New',monospace;font-size:13px;line-height:2;display:block">
+            Maximum safe discretionary = Income &minus; Base spend &minus; (Income Engine value &times; 6%)<br><br>
+            Where:<br>
+            &nbsp;&nbsp;Income &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;= last 12 months of all Income Engine distributions<br>
+            &nbsp;&nbsp;Base spend &nbsp;&nbsp;&nbsp;&nbsp;= monthly budget &times; 12<br>
+            &nbsp;&nbsp;Inc. Engine &times; 6% = reinvestment floor — twice spend growth rate, buffers NAV erosion
+          </code>
+        </div>
+
+        <p style="font-size:14px;color:var(--gray-600);margin-bottom:20px;line-height:1.7">
+          The 6% floor reinvests at twice the pace of spend growth, keeping the engine ahead of spending rather than merely keeping pace. Anything above the floor is genuinely surplus — for travel, purchases, gifts, etc. — without impairing the engine's future income.
+        </p>
+
+        <!-- Interactive Calculator -->
+        <div style="background:var(--gray-50);border:1px solid var(--gray-200);border-radius:10px;padding:24px;margin-bottom:24px">
+          <p style="font-size:13px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:16px">Discretionary Spending Calculator</p>
+
+          <div class="cl-inputs" style="margin-bottom:16px">
+            <div class="cl-field wide">
+              <label>Last 12 months total income ($)</label>
+              <input
+                type="text"
+                inputmode="numeric"
+                class="cl-dollar"
+                id="disc-income"
+                placeholder="e.g. 181,000"
+                oninput="fmtInput(this); calc_disc()"
+              />
+            </div>
+            <div class="cl-field wide">
+              <label>Current annual base spend ($)</label>
+              <input
+                type="text"
+                inputmode="numeric"
+                class="cl-dollar"
+                id="disc-spend"
+                placeholder="e.g. 70,000"
+                oninput="fmtInput(this); calc_disc()"
+              />
+            </div>
+            <div class="cl-field wide">
+              <label>Current Income Engine total value ($)</label>
+              <input
+                type="text"
+                inputmode="numeric"
+                class="cl-dollar"
+                id="disc-b2"
+                placeholder="e.g. 1,422,000"
+                oninput="fmtInput(this); calc_disc()"
+              />
+            </div>
+          </div>
+
+          <button
+            onclick="calc_disc()"
+            style="padding:9px 20px;background:var(--navy);color:white;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;font-family:var(--font);letter-spacing:0.02em"
+          >Calculate</button>
+
+          <div class="cl-result" id="disc-result" style="margin-top:16px"></div>
+        </div>
+
+        <!-- Reference Table -->
+        <p style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:8px">Scenario A Reference (Projection Milestones)</p>
+        <table>
+          <thead>
+            <tr>
+              <th>Year</th>
+              <th>Income</th>
+              <th>Base spend</th>
+              <th>Inc. Engine &times; 6%</th>
+              <th>Max discretionary</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>5</strong></td>
+              <td style="color:var(--green);font-weight:600">$141k</td>
+              <td>$70k</td>
+              <td style="color:var(--gray-600)">$63k</td>
+              <td class="amount" style="color:var(--navy);font-weight:700">$8k</td>
+            </tr>
+            <tr>
+              <td><strong>10</strong></td>
+              <td style="color:var(--green);font-weight:600">$231k</td>
+              <td>$81k</td>
+              <td style="color:var(--gray-600)">$102k</td>
+              <td class="amount" style="color:var(--navy);font-weight:700">$48k</td>
+            </tr>
+            <tr>
+              <td><strong>20</strong></td>
+              <td style="color:var(--green);font-weight:600">$691k</td>
+              <td>$108k</td>
+              <td style="color:var(--gray-600)">$300k</td>
+              <td class="amount" style="color:var(--navy);font-weight:700">$283k</td>
+            </tr>
+            <tr>
+              <td><strong>30</strong></td>
+              <td style="color:var(--green);font-weight:600">$2,327k</td>
+              <td>$146k</td>
+              <td style="color:var(--gray-600)">$1,032k</td>
+              <td class="amount" style="color:var(--navy);font-weight:700">$1,149k</td>
+            </tr>
+            <tr>
+              <td><strong>30</strong></td>
+              <td style="color:var(--green);font-weight:600">$6,702k</td>
+              <td>$146k</td>
+              <td style="color:var(--gray-600)">$1,487k</td>
+              <td class="amount" style="color:var(--navy);font-weight:700">$5,069k</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="callout green" style="margin-top:16px">
+          <strong>Run this every January.</strong> If planning a big purchase — house, car, trip, gift — verify it fits within your discretionary number. You don't extract it in advance — just spend from distributions as they arrive throughout the year and reinvest whatever's left.
+        </div>
+      </section>
+
+      <!-- ANNUAL REVIEW -->
+
+      <section id="annual">
+        <h2>
+          <span>Annual Review — Every January</span>
+        </h2>
+
+        <div class="stepper">
+          <div class="step">
+            <div class="step-num">1</div>
+
+            <div class="step-body">
+              <div class="step-title">Calculate Portfolio Health Ratio</div>
+
+              <div class="step-content">
+                <strong>Health Ratio = Portfolio Value ÷ (Starting Portfolio × 1.03<sup>years</sup>)</strong><br />
+                Starting portfolio: Scenario A $1,080,000 · Scenario B $1,850,000<br /><br />
+                Example (Scenario B, Year 10): baseline = $1,850,000 × 1.03¹⁰ = $2,487,000.
+                If portfolio = $5,000,000 → ratio = 2.19 (healthy). If $1,800,000 → ratio = 0.79 (cut 15%).
+              </div>
+            </div>
+          </div>
+
+          <div class="step">
+            <div class="step-num">2</div>
+
+            <div class="step-body">
+              <div class="step-title">Set Spending for Next 12 Months</div>
+
+              <div class="step-content">
+                <p style="margin-bottom:10px;font-size:13px;color:var(--gray-600);">
+                  Income is the signal — portfolio NAV drops do <strong>not</strong> trigger spending cuts in this strategy. Look at what you actually received, then apply the table below.
+                </p>
+
+                <p style="font-weight:700;font-size:13px;margin-bottom:6px;">Inputs needed:</p>
+                <ul style="font-size:13px;color:var(--gray-600);margin-bottom:10px;padding-left:18px;line-height:1.8">
+                  <li>Last 12 months total income (QQQI + SPYI + BTCI + IAUI distributions received)</li>
+                  <li>Current annual spend (what you spent this past year)</li>
+                  <li>Original target this year = starting spend × 1.03<sup>(this year − retirement start year)</sup></li>
+                </ul>
+
+                <p style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:6px;">Apply the first matching row only — evaluate top to bottom, stop at first match.</p>
+                <table class="guardrail-table">
+                  <thead>
+                    <tr>
+                      <th style="background:var(--navy);color:white;padding:8px 12px;font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase">Condition</th>
+                      <th style="background:var(--navy);color:white;padding:8px 12px;font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase">Action</th>
+                    </tr>
+                  </thead>
+                  <tr>
+                    <td>Income is more than 50% above spend target</td>
+                    <td><span class="gr-green">Reset spend to 100% of spend target</span> — income is very strong, restore full budget</td>
+                  </tr>
+                  <tr>
+                    <td>Income is more than 30% above current spend</td>
+                    <td><span class="gr-blue">Step up spend 15–25% toward spend target</span> — income comfortably ahead, take a meaningful raise</td>
+                  </tr>
+                  <tr>
+                    <td>Income is at least equal to current spend</td>
+                    <td><span class="gr-blue">3% raise, capped at spend target</span> — normal good year</td>
+                  </tr>
+                  <tr>
+                    <td>Income is below current spend</td>
+                    <td><span class="gr-amber">Hold spend flat — same dollar amount, no raise. Reserve covers the shortfall automatically.</span></td>
+                  </tr>
+                </table>
+
+                <p style="margin-top:12px;font-size:13px;color:var(--gray-600);">
+                  <strong>Crisis cut (rare):</strong> Portfolio NAV drops do NOT trigger spending cuts. Only a genuine income crisis triggers a reduction: Reserve &lt; 3 months of spend AND income &lt; 70% of spend. In that case: new spend = max(current × 0.85, target × 0.80). After one reduction the floor (target × 0.80) prevents further cuts.
+                </p>
+
+                <p style="margin-top:10px;font-size:13px;color:var(--gray-600);">
+                  <strong>Historical worst case (dot-com 2000–2002, Nasdaq −78%):</strong> No spending cuts were needed. Reserve bridged income shortfalls for 5 years. Portfolio survived.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div class="step">
+            <div class="step-num">3</div>
+
+            <div class="step-body">
+              <div class="step-title">Growth Harvest Trigger</div>
+
+              <div class="step-content">
+                Harvest only if <strong>ALL FOUR</strong> conditions are true:<br/>
+                1. Income Engine income (past 12 months) declined by &gt; 5% vs the prior 12 months <em>(income declined)</em><br/>
+                2. Income Engine income (past 12 months) &lt; 2× current spend <em>(surplus is genuinely thin)</em><br/>
+                3. Growth &gt; $200,000<br/>
+                4. Growth ≥ 85% of its all-time high <em>(no selling at a depressed bottom)</em><br/><br/>
+                If all four met: sell 75% of (Growth − $200,000) → buy 40% QQQI / 35% SPYI / 10% BTCI / 15% IAUI.<br/>
+                <span style="color:var(--gray-600);font-size:13px;">Condition 4 closes the low-VIX bear market loophole: a slow grinding decline depresses Growth NAV while income barely falls — without the ATH guard you'd sell Growth at the bottom. Expected: 2–4 harvests over 40 years. Skips if bear mode active.</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="step">
+            <div class="step-num">4</div>
+
+            <div class="step-body">
+              <div class="step-title">Income Engine Ratio Check</div>
+
+              <div class="step-content">
+                <table class="guardrail-table" style="margin-bottom:10px">
+                  <thead>
+                    <tr>
+                      <th style="background:var(--navy);color:white;padding:8px 12px;font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase">ETF</th>
+                      <th style="background:var(--navy);color:white;padding:8px 12px;font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase">Target</th>
+                      <th style="background:var(--navy);color:white;padding:8px 12px;font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase">Band</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td style="font-family:monospace;font-size:12px;background:var(--gray-50);font-weight:700">QQQI</td>
+                      <td>40%</td><td>38–42%</td>
+                    </tr>
+                    <tr>
+                      <td style="font-family:monospace;font-size:12px;background:var(--gray-50);font-weight:700">SPYI</td>
+                      <td>35%</td><td>33–37%</td>
+                    </tr>
+                    <tr>
+                      <td style="font-family:monospace;font-size:12px;background:var(--gray-50);font-weight:700">BTCI</td>
+                      <td>10%</td><td>8–12%</td>
+                    </tr>
+                    <tr>
+                      <td style="font-family:monospace;font-size:12px;background:var(--gray-50);font-weight:700">IAUI</td>
+                      <td>15%</td><td>13–17%</td>
+                    </tr>
+                  </tbody>
+                </table>
+                When an ETF drifts outside its band, redirect reinvestment surplus toward the underweight ETF until it returns to target. No selling, no taxable event — ratios correct naturally over months of reinvestment.<br /><br />
+                Monthly 40/35/10/15 reinvestment prevents most drift — this annual check catches anything that slipped through.
+              </div>
+            </div>
+          </div>
+
+          <div class="step">
+            <div class="step-num">5</div>
+
+            <div class="step-body">
+              <div class="step-title">Reserve Target Check <span style="font-size:12px;font-weight:400;color:var(--amber);margin-left:8px;">January only</span></div>
+
+              <div class="step-content">
+                <strong>Reserve target = current annual spend × 3.0</strong><br />
+                Scenario A: Year 1 = $180k · Year 10 = $242k · Year 40 = $587k<br />
+                Scenario B: Year 1 = $300k · Year 10 = $403k · Year 40 = $979k<br /><br />
+                If Reserve &lt; target × 0.5 → skip <strong>ALL</strong> Income Engine reinvestment — pause until restored (outside bear mode only).
+              </div>
+            </div>
+          </div>
+
+          <!-- Reserve Warning pointer -->
+          <div style="margin: -8px 0 8px 48px; padding: 14px 18px; background: var(--navy-pale); border: 1px solid var(--navy); border-radius: 10px;">
+            <p style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:4px;">&#8594; Reserve warning monitoring is handled quarterly in <a href="#monthly" style="color:var(--navy-light);font-weight:700">Section 3 — Operations</a>.</p>
+            <p style="font-size:13px;color:var(--gray-600)">The annual Step 5 above is the formal target recalculation (is the balance sized correctly for your updated spend?). The early-warning check — acting immediately when Reserve falls below 3 months of spend — happens at every quarterly check.</p>
+          </div>
+
+          <div class="step">
+            <div class="step-num">5b</div>
+
+            <div class="step-body">
+              <div class="step-title">If Reserve Depletes Entirely</div>
+
+              <div class="step-content">
+                <p style="font-size:13px;color:var(--gray-600);margin-bottom:10px;">
+                  If the quarterly monitoring was not enough and Reserve fully depletes, emergency sell order:
+                </p>
+                <table class="guardrail-table" style="margin-bottom:6px">
+                  <tr><td>1. VOO</td><td>Largest Growth position — sell first</td></tr>
+                  <tr><td>2. QQQM</td><td>Growth satellite</td></tr>
+                  <tr><td>3. VXUS</td><td>Growth satellite</td></tr>
+                  <tr><td>4. GOOGL</td><td>Growth satellite</td></tr>
+                  <tr><td>5. SMH</td><td>Growth satellite (most volatile — hold slightly longer)</td></tr>
+                </table>
+                <p style="font-size:13px;color:var(--gray-600);margin-top:4px;">
+                  If Growth also exhausted AND income still can't cover spend — Income Engine liquidation order: SPYI → IAUI → QQQI → BTCI (preserve highest-yield longest). Every $10k sold from QQQI removes ~$1,411/yr of income permanently.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div class="step">
+            <div class="step-num">6</div>
+
+            <div class="step-body">
+              <div class="step-title">Annual Tax Review</div>
+
+              <div class="step-content">
+                Review prior year 1099-DIVs from QQQI / SPYI / BTCI / IAUI:<br /><br />
+                <strong>☐ Confirm ROC%</strong> on 1099-DIVs (targets: QQQI ~95.8% · SPYI ~93.9% · BTCI ~86% · IAUI ~92% — adjust quarterly estimates if materially different)<br />
+                <strong>☐ Confirm Section 1256 classification</strong> still applies to all three ETFs<br />
+                <strong>☐ Check BTCI distribution character</strong> (regulatory risk — may change)<br />
+                <strong>☐ Update quarterly estimated tax payments</strong> for the coming year (IRS Form 1040-ES + CA Form 540-ES) — near $0 until year 8, then grows slowly<br />
+                <strong>☐ Track cost basis depletion</strong> per ETF — note which lots are approaching zero basis<br />
+                <strong>☐ Growth loss harvest opportunities</strong> — sell Growth positions at a loss to offset any Income Engine LTCG<br /><br />
+                Pay estimated taxes by: <strong>Jan 15 · Apr 15 · Jun 15 · Sep 15</strong>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- BEAR MARKET -->
+
+      <section id="bear">
+        <h2>Bear Market Rules</h2>
+
+        <div class="callout navy" style="margin-bottom: 20px">
+          <strong>Core principle:</strong> Never sell anything in a bear market
+          if you can avoid it. Income Engine distributions still flow. Reserve covers
+          shortfalls. Growth is last resort. Bear mode ends when S&amp;P is above
+          its 200-day MA for 3 consecutive months.
+        </div>
+
+        <div class="callout" style="background:var(--gray-100);border-color:var(--gray-400);color:var(--gray-600);margin-bottom:20px">
+          <strong>Note:</strong> Bear mode monitoring is ongoing (not scheduled). The flags tell you whether to skip Growth checks in January. Monthly Reserve bridging is always automatic regardless of bear mode.
+        </div>
+
+        <div class="bear-alerts">
+          <div class="bear-alert yellow">
+            <span class="bear-badge">⚠ Yellow · −15%</span>
+
+            <div class="bear-text">
+              <strong
+                >Stop annual checks (3–5). Keep reinvesting Income Engine surplus into Income Engine
+                normally.</strong
+              >
+
+              Income Engine income likely still covers spending. Reserve untouched. Consider
+              spending below your target this year.
+            </div>
+          </div>
+
+          <div class="bear-alert orange">
+            <span class="bear-badge">🟠 Orange · −25%</span>
+
+            <div class="bear-text">
+              <strong>Voluntary 15% discretionary cut recommended.</strong>
+
+              If Income Engine income falls below spending → draw the shortfall only from
+              Reserve. Stop buying anything.
+            </div>
+          </div>
+
+          <div class="bear-alert red">
+            <span class="bear-badge">🔴 Red · −40%</span>
+
+            <div class="bear-text">
+              <strong>Hard floor: Scenario A $42,000/yr · Scenario B $70,000/yr. Draw monthly shortfall from Reserve.</strong>
+
+              Do NOT sell Income Engine or Growth. Spend Income Engine income first, Reserve fills the gap.
+              Wait for recovery (S&amp;P above 200-day MA for 3 consecutive months).
+            </div>
+          </div>
+
+          <div class="bear-alert critical">
+            <span class="bear-badge">☠ Last Resort · Reserve Gone</span>
+
+            <div class="bear-text">
+              <strong>Sell Growth before Income Engine. Every $10k sold from QQQI removes ~$1,411/yr of income permanently.</strong>
+
+              Order: VOO → QQQM → VXUS → GOOGL → SMH → SPYI → QQQI → BTCI (most volatile, sell last). If you reach SPYI, seek financial advice.
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- PROJECTION -->
+
+      <section id="projection">
+        <h2>40-Year Projection</h2>
+
+        <p style="font-size: 13px; color: var(--gray-600); margin-bottom: 16px">
+          Median path across 10,000 Monte Carlo simulations. Years 1–15 are the reliable planning horizon. Years 20+ reflect compounding at current yields — treat as directional, not a forecast. SPAXX modeled with mean-reverting yield (starts 4%, long-run mean 1.5%, floor 0%) — Reserve is lower in later years than a fixed-4% assumption would show.
+        </p>
+
+        <p style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:8px">Scenario A — $60k/yr spend, $1,080,000 start · after-tax</p>
+        <p style="font-size:12px;color:var(--gray-600);font-style:italic;margin-bottom:8px">Start = initial allocation. Year 1+ = end-of-year median values across surviving simulation paths. Disc./yr = Income − Spend − (Inc.Engine × 6%).</p>
+        <table>
+          <thead>
+            <tr>
+              <th>Year</th><th>Reserve</th><th>Inc. Engine</th><th>Growth</th><th>Total</th><th>Income/yr</th><th>Tax/yr</th><th>Spend/yr</th><th>Disc./yr</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr style="background: var(--navy-pale); font-weight: 700; border-bottom: 2px solid var(--navy);">
+              <td><strong>Start</strong></td><td><strong>$180,000</strong></td>
+              <td style="color: var(--navy-light); font-weight: 700"><strong>$700,000</strong></td>
+              <td><strong>$200,000</strong></td><td><strong>$1,080,000</strong></td>
+              <td style="color: var(--green); font-weight: 700"><strong>$100,000</strong></td>
+              <td style="color: var(--red)"><strong>~$0</strong></td><td><strong>$60,000</strong></td>
+              <td>—</td>
+            </tr>
+            <tr>
+              <td><strong>1 (end)</strong></td><td>$186k</td>
+              <td style="color: var(--navy-light); font-weight: 600">$759k</td>
+              <td>$209k</td><td><strong>$1,154k</strong></td>
+              <td style="color: var(--green); font-weight: 600">$99k</td>
+              <td style="color: var(--red)">$0k</td><td>$62k</td><td style="color:var(--gray-500)">$0</td>
+            </tr>
+            <tr>
+              <td><strong>5 (end)</strong></td><td>$203k</td>
+              <td style="color: var(--navy-light); font-weight: 600">$1,051k</td>
+              <td>$240k</td><td><strong>$1,494k</strong></td>
+              <td style="color: var(--green); font-weight: 600">$140k</td>
+              <td style="color: var(--red)">$0k</td><td>$70k</td><td>$8k</td>
+            </tr>
+            <tr>
+              <td><strong>10 (end)</strong></td><td>$221k</td>
+              <td style="color: var(--navy-light); font-weight: 600">$1,702k</td>
+              <td>$310k</td><td><strong>$2,233k</strong></td>
+              <td style="color: var(--green); font-weight: 600">$231k</td>
+              <td style="color: var(--red)">$2k</td><td>$81k</td><td>$48k</td>
+            </tr>
+            <tr>
+              <td><strong>20 (end)</strong></td><td>$258k</td>
+              <td style="color: var(--navy-light); font-weight: 600">$5,005k</td>
+              <td>$644k</td><td><strong>$5,907k</strong></td>
+              <td style="color: var(--green); font-weight: 600">$682k</td>
+              <td style="color: var(--red)">$30k</td><td>$108k</td><td>$273k</td>
+            </tr>
+            <tr>
+              <td><strong>30 (end)</strong></td><td>$303k</td>
+              <td style="color: var(--navy-light); font-weight: 600">$17,346k</td>
+              <td>$1,484k</td><td><strong>$19,133k</strong></td>
+              <td style="color: var(--green); font-weight: 600">$2,356k</td>
+              <td style="color: var(--red)">$139k</td><td>$146k</td><td>$1,169k</td>
+            </tr>
+            <tr>
+              <td><strong>40 (end)</strong></td><td>$365k</td>
+              <td style="color: var(--navy-light); font-weight: 600">$64,407k</td>
+              <td>$3,389k</td><td><strong>$68,161k</strong></td>
+              <td style="color: var(--green); font-weight: 600">$8,814k</td>
+              <td style="color: var(--red)">$631k</td><td>$196k</td><td>$4,753k</td>
+            </tr>
+          </tbody>
+        </table>
+        <p class="proj-note">Year-40 realistic range (p10 → median → p90): <strong>$18.3M → $71.0M → $221M</strong></p>
+
+        <p style="font-size:13px;font-weight:700;color:var(--navy);margin:20px 0 8px">Scenario B — $100k/yr spend, $1,850,000 start · after-tax</p>
+        <p style="font-size:12px;color:var(--gray-600);font-style:italic;margin-bottom:8px">Start = initial allocation. Year 1+ = end-of-year median values across surviving simulation paths. Disc./yr = Income − Spend − (Inc.Engine × 6%).</p>
+        <table>
+          <thead>
+            <tr>
+              <th>Year</th><th>Reserve</th><th>Inc. Engine</th><th>Growth</th><th>Total</th><th>Income/yr</th><th>Tax/yr</th><th>Spend/yr</th><th>Disc./yr</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr style="background: var(--navy-pale); font-weight: 700; border-bottom: 2px solid var(--navy);">
+              <td><strong>Start</strong></td><td><strong>$300,000</strong></td>
+              <td style="color: var(--navy-light); font-weight: 700"><strong>$1,350,000</strong></td>
+              <td><strong>$200,000</strong></td><td><strong>$1,850,000</strong></td>
+              <td style="color: var(--green); font-weight: 700"><strong>$194,000</strong></td>
+              <td style="color: var(--red)"><strong>~$0</strong></td><td><strong>$100,000</strong></td>
+              <td>—</td>
+            </tr>
+            <tr>
+              <td><strong>1 (end)</strong></td><td>$310k</td>
+              <td style="color: var(--navy-light); font-weight: 600">$1,467k</td>
+              <td>$209k</td><td><strong>$1,986k</strong></td>
+              <td style="color: var(--green); font-weight: 600">$191k</td>
+              <td style="color: var(--red)">$0k</td><td>$103k</td><td style="color:var(--gray-500)">$0</td>
+            </tr>
+            <tr>
+              <td><strong>5 (end)</strong></td><td>$339k</td>
+              <td style="color: var(--navy-light); font-weight: 600">$2,039k</td>
+              <td>$248k</td><td><strong>$2,627k</strong></td>
+              <td style="color: var(--green); font-weight: 600">$270k</td>
+              <td style="color: var(--red)">$1k</td><td>$116k</td><td>$32k</td>
+            </tr>
+            <tr>
+              <td><strong>10 (end)</strong></td><td>$369k</td>
+              <td style="color: var(--navy-light); font-weight: 600">$3,295k</td>
+              <td>$335k</td><td><strong>$3,999k</strong></td>
+              <td style="color: var(--green); font-weight: 600">$451k</td>
+              <td style="color: var(--red)">$13k</td><td>$134k</td><td>$119k</td>
+            </tr>
+            <tr>
+              <td><strong>20 (end)</strong></td><td>$431k</td>
+              <td style="color: var(--navy-light); font-weight: 600">$9,843k</td>
+              <td>$732k</td><td><strong>$11,007k</strong></td>
+              <td style="color: var(--green); font-weight: 600">$1,352k</td>
+              <td style="color: var(--red)">$82k</td><td>$181k</td><td>$581k</td>
+            </tr>
+            <tr>
+              <td><strong>30 (end)</strong></td><td>$506k</td>
+              <td style="color: var(--navy-light); font-weight: 600">$34,322k</td>
+              <td>$1,676k</td><td><strong>$36,504k</strong></td>
+              <td style="color: var(--green); font-weight: 600">$4,696k</td>
+              <td style="color: var(--red)">$326k</td><td>$243k</td><td>$2,394k</td>
+            </tr>
+            <tr>
+              <td><strong>40 (end)</strong></td><td>$608k</td>
+              <td style="color: var(--navy-light); font-weight: 600">$126,113k</td>
+              <td>$3,887k</td><td><strong>$130,608k</strong></td>
+              <td style="color: var(--green); font-weight: 600">$17,191k</td>
+              <td style="color: var(--red)">$1,498k</td><td>$326k</td><td>$9,298k</td>
+            </tr>
+          </tbody>
+        </table>
+        <p class="proj-note">Year-40 realistic range (p10 → median → p90): <strong>$34.8M → $133.7M → $427M</strong></p>
+
+        <p style="font-size:13px;font-weight:700;color:var(--navy);margin:20px 0 8px">Scenario C — $8,400/yr spend, $125,200 start · no Growth · after-tax</p>
+        <p style="font-size:12px;color:var(--gray-600);font-style:italic;margin-bottom:8px">Income engine only — no harvest feeder or emergency backstop. 100% success on Income Engine alone. Disc./yr = Income − Spend − (Inc.Engine × 6%).</p>
+        <table>
+          <thead>
+            <tr>
+              <th>Year</th><th>Reserve</th><th>Inc. Engine</th><th>Growth</th><th>Total</th><th>Income/yr</th><th>Tax/yr</th><th>Spend/yr</th><th>Disc./yr</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr style="background: var(--navy-pale); font-weight: 700; border-bottom: 2px solid var(--navy);">
+              <td><strong>Start</strong></td><td><strong>$25k</strong></td>
+              <td style="color: var(--navy-light); font-weight: 700"><strong>$100k</strong></td>
+              <td><strong>$0</strong></td><td><strong>$125k</strong></td>
+              <td style="color: var(--green); font-weight: 700"><strong>$14k</strong></td>
+              <td style="color: var(--red)"><strong>~$0</strong></td><td><strong>$8,400</strong></td><td>—</td>
+            </tr>
+            <tr>
+              <td><strong>1 (end)</strong></td><td>$26k</td>
+              <td style="color: var(--navy-light); font-weight: 600">$106k</td>
+              <td>$0</td><td><strong>$132k</strong></td>
+              <td style="color: var(--green); font-weight: 600">$14k</td>
+              <td style="color: var(--red)">$0</td><td>$9k</td><td style="color:var(--gray-500)">$0</td>
+            </tr>
+            <tr>
+              <td><strong>5 (end)</strong></td><td>$28k</td>
+              <td style="color: var(--navy-light); font-weight: 600">$138k</td>
+              <td>$0</td><td><strong>$167k</strong></td>
+              <td style="color: var(--green); font-weight: 600">$19k</td>
+              <td style="color: var(--red)">$0</td><td>$10k</td><td>$1k</td>
+            </tr>
+            <tr>
+              <td><strong>10 (end)</strong></td><td>$31k</td>
+              <td style="color: var(--navy-light); font-weight: 600">$211k</td>
+              <td>$0</td><td><strong>$241k</strong></td>
+              <td style="color: var(--green); font-weight: 600">$29k</td>
+              <td style="color: var(--red)">~$0</td><td>$11k</td><td>$5k</td>
+            </tr>
+            <tr>
+              <td><strong>20 (end)</strong></td><td>$36k</td>
+              <td style="color: var(--navy-light); font-weight: 600">$621k</td>
+              <td>$0</td><td><strong>$657k</strong></td>
+              <td style="color: var(--green); font-weight: 600">$84k</td>
+              <td style="color: var(--red)">~$0</td><td>$15k</td><td>$32k</td>
+            </tr>
+            <tr>
+              <td><strong>30 (end)</strong></td><td>$42k</td>
+              <td style="color: var(--navy-light); font-weight: 600">$2,267k</td>
+              <td>$0</td><td><strong>$2,309k</strong></td>
+              <td style="color: var(--green); font-weight: 600">$310k</td>
+              <td style="color: var(--red)">$1k</td><td>$20k</td><td>$154k</td>
+            </tr>
+            <tr>
+              <td><strong>40 (end)</strong></td><td>$51k</td>
+              <td style="color: var(--navy-light); font-weight: 600">$9,051k</td>
+              <td>$0</td><td><strong>$9,101k</strong></td>
+              <td style="color: var(--green); font-weight: 600">$1,221k</td>
+              <td style="color: var(--red)">$34k</td><td>$27k</td><td>$651k</td>
+            </tr>
+          </tbody>
+        </table>
+        <p class="proj-note">Year-40 realistic range (p10 → median → p90): <strong>$1.05M → $9.1M → $35.6M</strong></p>
+
+        <p class="proj-note">
+          Growth grows over 40 years because the harvest trigger is selective (4 conditions including ATH guard). Reserve grows slowly tracking the 3× spend target via SPAXX yield. The 100% success rate is what matters, not the end balance. Year-40 values are after federal + California tax with proper ROC basis depletion modeling.
+        </p>
+
+        <p style="font-size:13px;font-weight:700;color:var(--navy);margin:20px 0 8px">Income by VIX Environment</p>
+        <table>
+          <thead>
+            <tr><th>Market</th><th>VIX</th><th>Blended Yield</th><th>Scenario A ($700k Inc. Engine)</th><th>Scenario B ($1.35M Inc. Engine)</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Extreme calm (2017-type)</td><td>10</td><td>~9.5%</td><td>$66,500</td><td>$128,250</td></tr>
+            <tr><td>Low VIX</td><td>12</td><td>~11.0%</td><td>$77,000</td><td>$148,500</td></tr>
+            <tr><td><strong>Average</strong></td><td><strong>18</strong></td><td><strong>~14.4%</strong></td><td><strong>$100,800</strong></td><td><strong>$194,400</strong></td></tr>
+            <tr><td>Elevated</td><td>22</td><td>~17.5%</td><td>$122,500</td><td>$236,250</td></tr>
+            <tr><td>Crisis / crash</td><td>40</td><td>~25%+</td><td>$175,000+</td><td>$337,500+</td></tr>
+          </tbody>
+        </table>
+        <p class="proj-note">BTCI contributes income independent of equity VIX — the 10% allocation provides an uncorrelated yield floor that persists during calm equity markets.</p>
+      </section>
+
+      <!-- BEAR MONITOR -->
+
+      <section id="bear-monitor">
+        <h2>
+          <span class="section-num" style="background: #d97706">⚡</span> Bear
+          Market Monitor
+        </h2>
+
+        <div
+          class="callout"
+          style="
+            background: #fff7ed;
+            border-color: #d97706;
+            color: #78350f;
+            margin-bottom: 20px;
+          "
+        >
+          <strong>Monitor continuously — not just in January.</strong> If the
+          market drops 15%+ from your peak at any point during the year, the
+          relevant flag activates immediately. Check this whenever markets move
+          significantly.
+        </div>
+
+        <div
+          style="
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 16px;
+          "
+        >
+          <div class="cl-field wide">
+            <label
+              style="
+                font-size: 12px;
+                font-weight: 700;
+                text-transform: uppercase;
+                letter-spacing: 0.05em;
+                color: var(--gray-600);
+              "
+              >Portfolio All-Time Peak ($)</label
+            >
+
+            <input
+              type="text"
+              inputmode="numeric"
+              class="cl-dollar"
+              id="bm-peak"
+              placeholder="e.g. 2,800,000"
+              oninput="
+                fmtInput(this);
+                debounce('bm', calcBearMonitor);
+              "
+              style="
+                padding: 10px 12px;
+                border: 1px solid var(--gray-200);
+                border-radius: 8px;
+                font-size: 15px;
+                font-family: var(--font);
+                width: 100%;
+                outline: none;
+              "
+            />
+          </div>
+
+          <div class="cl-field wide">
+            <label
+              style="
+                font-size: 12px;
+                font-weight: 700;
+                text-transform: uppercase;
+                letter-spacing: 0.05em;
+                color: var(--gray-600);
+              "
+              >Current Portfolio ($)
+              <span
+                style="
+                  color: var(--gray-400);
+                  font-weight: 400;
+                  text-transform: none;
+                "
+                >— auto-fills from checklist</span
+              ></label
+            >
+
+            <input
+              type="text"
+              inputmode="numeric"
+              class="cl-dollar"
+              id="bm-current"
+              placeholder="e.g. 2,400,000"
+              oninput="
+                fmtInput(this);
+                const v = parseNum('bm-current');
+                if (!isNaN(v) && v > 0) setNum('i1-portfolio', v);
+                debounce('c1', calc1);
+                debounce('bm', calcBearMonitor);
+              "
+              style="
+                padding: 10px 12px;
+                border: 1px solid var(--gray-200);
+                border-radius: 8px;
+                font-size: 15px;
+                font-family: var(--font);
+                width: 100%;
+                outline: none;
+              "
+            />
+          </div>
+        </div>
+
+        <div id="bm-result" style="display: none"></div>
+
+        <div style="margin-top: 20px">
+          <p
+            style="
+              font-size: 13px;
+              font-weight: 700;
+              color: var(--navy);
+              margin-bottom: 10px;
+            "
+          >
+            Flag Thresholds
+          </p>
+
+          <div
+            style="
+              display: grid;
+              grid-template-columns: repeat(4, 1fr);
+              gap: 10px;
+            "
+          >
+            <div
+              style="
+                padding: 12px;
+                border-radius: 8px;
+                background: var(--green-bg);
+                border: 1px solid #bbf7d0;
+                text-align: center;
+              "
+            >
+              <div
+                style="
+                  font-size: 11px;
+                  font-weight: 700;
+                  color: #14532d;
+                  text-transform: uppercase;
+                  margin-bottom: 4px;
+                "
+              >
+                No Flag
+              </div>
+
+              <div
+                style="font-size: 18px; font-weight: 800; color: var(--green)"
+              >
+                &lt; 15%
+              </div>
+
+              <div style="font-size: 11px; color: #14532d; margin-top: 4px">
+                Normal operations
+              </div>
+            </div>
+
+            <div
+              style="
+                padding: 12px;
+                border-radius: 8px;
+                background: var(--amber-bg);
+                border: 1px solid #fde68a;
+                text-align: center;
+              "
+            >
+              <div
+                style="
+                  font-size: 11px;
+                  font-weight: 700;
+                  color: #78350f;
+                  text-transform: uppercase;
+                  margin-bottom: 4px;
+                "
+              >
+                Yellow Flag
+              </div>
+
+              <div
+                style="font-size: 18px; font-weight: 800; color: var(--amber)"
+              >
+                15–25%
+              </div>
+
+              <div style="font-size: 11px; color: #78350f; margin-top: 4px">
+                Pause annual checks 3–5
+              </div>
+            </div>
+
+            <div
+              style="
+                padding: 12px;
+                border-radius: 8px;
+                background: var(--orange-bg);
+                border: 1px solid #fb923c;
+                text-align: center;
+              "
+            >
+              <div
+                style="
+                  font-size: 11px;
+                  font-weight: 700;
+                  color: #7c2d12;
+                  text-transform: uppercase;
+                  margin-bottom: 4px;
+                "
+              >
+                Orange Flag
+              </div>
+
+              <div
+                style="font-size: 18px; font-weight: 800; color: var(--orange)"
+              >
+                25–40%
+              </div>
+
+              <div style="font-size: 11px; color: #7c2d12; margin-top: 4px">
+                Voluntary 15% cut
+              </div>
+            </div>
+
+            <div
+              style="
+                padding: 12px;
+                border-radius: 8px;
+                background: var(--red-bg);
+                border: 1px solid #fecaca;
+                text-align: center;
+              "
+            >
+              <div
+                style="
+                  font-size: 11px;
+                  font-weight: 700;
+                  color: #991b1b;
+                  text-transform: uppercase;
+                  margin-bottom: 4px;
+                "
+              >
+                Red Flag
+              </div>
+
+              <div style="font-size: 18px; font-weight: 800; color: var(--red)">
+                &ge; 40%
+              </div>
+
+              <div style="font-size: 11px; color: #991b1b; margin-top: 4px">
+                A: $42k floor · B: $70k floor
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- CHECKLIST -->
+
+      <section id="checklist">
+        <h2>Annual Checklist</h2>
+
+        <p style="font-size: 13px; color: var(--gray-600); margin-bottom: 8px">
+          Run every January. Enter your numbers — calculations update automatically.
+        </p>
+
+        <p
+          style="
+            font-size: 13px;
+            margin-bottom: 16px;
+            padding: 10px 14px;
+            background: #fff7ed;
+            border-left: 3px solid #d97706;
+            border-radius: 0 6px 6px 0;
+            color: #78350f;
+          "
+        >
+          <strong>Bear market flags are not annual</strong> — use the
+          <a href="#bear-monitor" style="color: #d97706; font-weight: 700"
+            >Bear Market Monitor</a
+          >
+          above anytime. If a flag is active, checks 3–5 are
+          skipped.
+        </p>
+
+        <div class="checklist">
+          <!-- Header -->
+
+          <div class="checklist-header">
+            <div class="cl-header-left">
+              <span style="font-size: 13px; font-weight: 600">YEAR</span>
+
+              <input
+                class="cl-year-input"
+                id="cl-year"
+                type="text"
+                placeholder="e.g. 2027"
+                maxlength="4"
+              />
+
+              <span style="font-size: 13px; font-weight: 600">DATE</span>
+
+              <input
+                class="cl-year-input"
+                id="cl-date"
+                type="text"
+                placeholder="Jan 2027"
+                style="width: 100px"
+              />
+
+              <span style="font-size: 13px; font-weight: 600">SCENARIO</span>
+
+              <select id="cl-scenario" onchange="activeScenario=this.value; calc1();"
+                style="background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);border-radius:4px;color:white;font-size:12px;padding:3px 8px;font-family:var(--font);">
+                <option value="A" style="color:#000">A — $1.08M / $60k/yr</option>
+                <option value="B" selected style="color:#000">B — $1.85M / $100k/yr</option>
+              </select>
+            </div>
+
+            <button id="reset-btn" onclick="resetAll()">Reset All</button>
+          </div>
+
+          <!-- Global context bar — filled from item 1 -->
+
+          <div class="cl-global-bar" id="global-bar">
+            <div class="cl-global-item">
+              <div class="cl-global-label">Portfolio</div>
+              <div class="cl-global-val" id="g-portfolio">—</div>
+            </div>
+
+            <div class="cl-global-item">
+              <div class="cl-global-label">Years Elapsed</div>
+              <div class="cl-global-val" id="g-years">—</div>
+            </div>
+
+            <div class="cl-global-item">
+              <div class="cl-global-label" id="g-baseline-label">Baseline</div>
+              <div class="cl-global-val" id="g-baseline">—</div>
+            </div>
+
+            <div class="cl-global-item">
+              <div class="cl-global-label">Health Ratio</div>
+              <div class="cl-global-val" id="g-ratio">—</div>
+            </div>
+
+            <div class="cl-global-item">
+              <div class="cl-global-label">Expected Spend</div>
+              <div class="cl-global-val" id="g-spend">—</div>
+            </div>
+          </div>
+
+          <!-- 1. Health Ratio -->
+
+          <div class="cl-item" id="item1">
+            <div class="cl-top">
+              <input
+                type="checkbox"
+                class="cl-check"
+                id="c1"
+                onchange="toggleDone(1)"
+              />
+
+              <div class="cl-num">1</div>
+
+              <div class="cl-title">
+                Health Ratio
+                <span class="cl-subtitle"
+                  >— Portfolio vs inflation-adjusted baseline</span
+                >
+              </div>
+            </div>
+
+          <div class="cl-body">
+            <div class="cl-inputs">
+              <div class="cl-field wide">
+                <label>Total Portfolio Value ($)</label>
+                <input
+                  type="text"
+                  inputmode="numeric"
+                  class="cl-dollar"
+                  id="i1-portfolio"
+                  placeholder="e.g. 2,400,000"
+                  oninput="fmtInput(this); debounce('c1', calc1)"
+                />
+              </div>
+              <div class="cl-field">
+                <label>Years Since Strategy Started</label>
+                <input
+                  type="number"
+                  id="i1-years"
+                  placeholder="1, 2, 3..."
+                  min="1"
+                  max="40"
+                  oninput="debounce('c1', calc1)"
+                />
+              </div>
+            </div>
+            <p style="font-size: 12px; color: var(--gray-400); margin-bottom: 8px">
+              &#9432; &ldquo;Years since strategy started&rdquo; means how many full years have passed
+              (year 1 = first review, year 5 = fifth review, etc). Once entered, these values are
+              shared across all checks below.
+            </p>
+            <div class="cl-result" id="r1"></div>
+          </div>
+        </div>
+
+        <!-- 2. Spending Rule -->
+
+        <div class="cl-item" id="item2">
+          <div class="cl-top">
+            <input type="checkbox" class="cl-check" id="c2" onchange="toggleDone(2)" />
+            <div class="cl-num">2</div>
+            <div class="cl-title">
+              Set Spending for Next 12 Months
+              <span class="cl-subtitle">&mdash; income-based rules</span>
+            </div>
+          </div>
+          <div class="cl-body">
+            <div class="cl-inputs">
+              <div class="cl-field wide">
+                <label>Last 12 Months Total Income ($) <span style="font-weight:400;text-transform:none;color:var(--gray-400)">— distributions just received</span></label>
+                <input
+                  type="text"
+                  inputmode="numeric"
+                  class="cl-dollar"
+                  id="i2-income"
+                  placeholder="e.g. 140,000"
+                  oninput="fmtInput(this); var _d=document.getElementById('i3-b2now'); if(_d) _d.value=this.value; calc2();"
+                />
+              </div>
+              <div class="cl-field wide">
+                <label>Last Year's Spend ($) <span style="font-weight:400;text-transform:none;color:var(--gray-400)">— what you actually spent</span></label>
+                <input
+                  type="text"
+                  inputmode="numeric"
+                  class="cl-dollar"
+                  id="i2-spend"
+                  placeholder="e.g. 100,000"
+                  oninput="fmtInput(this); var _d=document.getElementById('i3-spend'); if(_d) _d.value=this.value; calc2();"
+                />
+              </div>
+              <div class="cl-field wide">
+                <label>Upcoming year's target ($) <span style="font-weight:400;text-transform:none;color:var(--gray-400)">= last year's target × max(1.03, 1 + actual CPI)</span></label>
+                <input
+                  type="text"
+                  inputmode="numeric"
+                  class="cl-dollar"
+                  id="i2-target"
+                  placeholder="e.g. 103,000"
+                  oninput="fmtInput(this); calc2()"
+                />
+              </div>
+            </div>
+            <p style="font-size: 12px; color: var(--gray-400); margin-bottom: 8px">
+              &#9432; Income = total distributions received from QQQI + SPYI + BTCI + IAUI in the past 12 months. Upcoming year's target auto-fills using 3%/yr (conservative floor) — override manually if CPI exceeded 3% to preserve purchasing power.
+            </p>
+            <div class="cl-result" id="r2"></div>
+          </div>
+        </div>
+          <!-- 3. B3 Harvest -->
+
+          <div class="cl-item" id="item3">
+            <div class="cl-top">
+              <input
+                type="checkbox"
+                class="cl-check"
+                id="c3"
+                onchange="toggleDone(3)"
+              />
+
+              <div class="cl-num">3</div>
+
+              <div class="cl-title">
+                Growth Harvest Trigger
+                <span class="cl-subtitle"
+                  >— fires only if Income Engine income declined</span
+                >
+              </div>
+            </div>
+
+            <div class="cl-body">
+              <div class="cl-inputs">
+                <div class="cl-field wide">
+                  <label>Income Engine Income — Past 12 Months ($)</label>
+
+                  <input
+                    type="text"
+                    inputmode="numeric"
+                    class="cl-dollar"
+                    id="i3-b2now"
+                    placeholder="e.g. 180,000"
+                    oninput="
+                      fmtInput(this);
+                      debounce('calc3', calc3);
+                    "
+                  />
+                </div>
+
+                <div class="cl-field wide">
+                  <label>Income Engine Income — Prior 12 Months ($)</label>
+
+                  <input
+                    type="text"
+                    inputmode="numeric"
+                    class="cl-dollar"
+                    id="i3-b2prev"
+                    placeholder="e.g. 195,000"
+                    oninput="
+                      fmtInput(this);
+                      debounce('calc3', calc3);
+                    "
+                  />
+                </div>
+
+                <div class="cl-field wide">
+                  <label>Current Annual Spend ($)</label>
+
+                  <input
+                    type="text"
+                    inputmode="numeric"
+                    class="cl-dollar"
+                    id="i3-spend"
+                    placeholder="e.g. 60,000"
+                    oninput="
+                      fmtInput(this);
+                      debounce('calc3', calc3);
+                    "
+                  />
+                </div>
+
+                <div class="cl-field wide">
+                  <label>Growth Current Value ($)</label>
+
+                  <input
+                    type="text"
+                    inputmode="numeric"
+                    class="cl-dollar"
+                    id="i3-b3"
+                    placeholder="e.g. 250,000"
+                    oninput="
+                      fmtInput(this);
+                      debounce('calc3', calc3);
+                    "
+                  />
+                </div>
+
+                <div class="cl-field wide">
+                  <label>Growth All-Time High ($)</label>
+
+                  <input
+                    type="text"
+                    inputmode="numeric"
+                    class="cl-dollar"
+                    id="i3-b3ath"
+                    placeholder="e.g. 280,000"
+                    oninput="
+                      fmtInput(this);
+                      debounce('calc3', calc3);
+                    "
+                  />
+                </div>
+              </div>
+
+              <div class="cl-result" id="r3"></div>
+            </div>
+          </div>
+
+          <!-- 4. B2 Ratio Check -->
+
+          <div class="cl-item" id="item4">
+            <div class="cl-top">
+              <input
+                type="checkbox"
+                class="cl-check"
+                id="c4"
+                onchange="toggleDone(4)"
+              />
+
+              <div class="cl-num">4</div>
+
+              <div class="cl-title">
+                Income Engine Ratio Check
+                <span class="cl-subtitle">— QQQI 38–42% / SPYI 33–37% / BTCI 8–12% / IAUI 13–17%</span>
+              </div>
+            </div>
+
+            <div class="cl-body">
+              <div class="cl-inputs">
+                <div class="cl-field wide">
+                  <label>Total Income Engine Value ($)</label>
+                  <input
+                    type="text"
+                    inputmode="numeric"
+                    class="cl-dollar"
+                    id="i4-b2total"
+                    placeholder="e.g. 2,000,000"
+                    oninput="fmtInput(this); debounce('calc4', calc4);"
+                  />
+                </div>
+
+                <div class="cl-field wide">
+                  <label>QQQI Value ($)</label>
+                  <input
+                    type="text"
+                    inputmode="numeric"
+                    class="cl-dollar"
+                    id="i4-qqqi-val"
+                    placeholder="e.g. 1,300,000"
+                    oninput="fmtInput(this); debounce('calc4', calc4);"
+                  />
+                </div>
+
+                <div class="cl-field wide">
+                  <label>SPYI Value ($)</label>
+                  <input
+                    type="text"
+                    inputmode="numeric"
+                    class="cl-dollar"
+                    id="i4-spyi-val"
+                    placeholder="e.g. 500,000"
+                    oninput="fmtInput(this); debounce('calc4', calc4);"
+                  />
+                </div>
+
+                <div class="cl-field wide">
+                  <label>BTCI Value ($)</label>
+                  <input
+                    type="text"
+                    inputmode="numeric"
+                    class="cl-dollar"
+                    id="i4-btci-val"
+                    placeholder="e.g. 200,000"
+                    oninput="fmtInput(this); debounce('calc4', calc4);"
+                  />
+                </div>
+
+                <div class="cl-field wide">
+                  <label>IAUI Value ($)</label>
+                  <input
+                    type="text"
+                    inputmode="numeric"
+                    class="cl-dollar"
+                    id="i4-iaui-val"
+                    placeholder="e.g. 300,000"
+                    oninput="fmtInput(this); debounce('calc4', calc4);"
+                  />
+                </div>
+              </div>
+
+              <div class="cl-result" id="r4"></div>
+            </div>
+          </div>
+
+          <!-- 5. B1 Target -->
+
+          <div class="cl-item" id="item5">
+            <div class="cl-top">
+              <input
+                type="checkbox"
+                class="cl-check"
+                id="c5"
+                onchange="toggleDone(5)"
+              />
+
+              <div class="cl-num">5</div>
+
+              <div class="cl-title">
+                Reserve Target Check <span style="font-size:11px;font-weight:600;color:var(--amber);margin-left:4px;">(January)</span>
+                <span class="cl-subtitle"
+                  >— target = current spend × 3.0</span
+                >
+              </div>
+            </div>
+
+            <div class="cl-body">
+              <div class="cl-inputs">
+                <div class="cl-field wide">
+                  <label>Reserve (SPAXX) Balance ($)</label>
+
+                  <input
+                    type="text"
+                    inputmode="numeric"
+                    class="cl-dollar"
+                    id="i5-b1"
+                    placeholder="e.g. 195,000"
+                    oninput="
+                      fmtInput(this);
+                      debounce('calc5', calc5);
+                    "
+                  />
+                </div>
+              </div>
+
+              <p
+                style="
+                  font-size: 12px;
+                  color: var(--gray-400);
+                  margin-bottom: 8px;
+                "
+              >
+                Annual spend pulled from check #2 above.
+              </p>
+
+              <p
+                style="
+                  font-size: 12px;
+                  color: var(--navy);
+                  font-weight: 600;
+                  margin-bottom: 8px;
+                  padding: 6px 10px;
+                  background: var(--navy-pale);
+                  border-radius: 5px;
+                  border-left: 3px solid var(--navy);
+                "
+              >
+                &#8594; This annual check recalculates the Reserve target for the coming year. The early-warning monitoring (Scenario A &lt; $15,000 · Scenario B &lt; $25,000 · Scenario C Scenario C Test portfolio &lt;lt;lt; $2,100) is handled quarterly — see <a href="#monthly" style="color:var(--navy-light);font-weight:700">Section 3 — Operations</a>.
+              </p>
+
+              <div class="cl-result" id="r5"></div>
+            </div>
+          </div>
+
+          <!-- 6. Yield Check -->
+
+          <div class="cl-item" id="item6">
+            <div class="cl-top">
+              <input
+                type="checkbox"
+                class="cl-check"
+                id="c6"
+                onchange="toggleDone(6)"
+              />
+
+              <div class="cl-num">6</div>
+
+              <div class="cl-title">
+                Yield Check
+                <span class="cl-subtitle">— SPYI min 8% · QQQI min 10%</span>
+              </div>
+            </div>
+
+            <div class="cl-body">
+              <div class="cl-inputs">
+                <div class="cl-field">
+                  <label>SPYI Yield (%)</label>
+
+                  <input
+                    type="number"
+                    id="i8-spyi"
+                    placeholder="e.g. 13.0"
+                    step="0.1"
+                    min="0"
+                    max="30"
+                    oninput="calc6()"
+                  />
+                </div>
+
+                <div class="cl-field">
+                  <label>QQQI Yield (%)</label>
+
+                  <input
+                    type="number"
+                    id="i8-qqqi"
+                    placeholder="e.g. 15.0"
+                    step="0.1"
+                    min="0"
+                    max="50"
+                    oninput="calc6()"
+                  />
+                </div>
+
+                <div class="cl-field">
+                  <label>BTCI Yield (%)</label>
+
+                  <input
+                    type="number"
+                    id="i8-btci"
+                    placeholder="e.g. 26.0"
+                    step="0.1"
+                    min="0"
+                    max="100"
+                    oninput="calc6()"
+                  />
+                </div>
+              </div>
+
+              <div class="cl-result" id="r8"></div>
+            </div>
+          </div>
+
+          <!-- 7. NEOS Check -->
+
+          <div class="cl-item" id="item7">
+            <div class="cl-top">
+              <input
+                type="checkbox"
+                class="cl-check"
+                id="c7"
+                onchange="toggleDone(7)"
+              />
+
+              <div class="cl-num">7</div>
+
+              <div class="cl-title">
+                NEOS Funds Operating?
+                <span class="cl-subtitle"
+                  >— QQQI, SPYI &amp; BTCI still active</span
+                >
+              </div>
+            </div>
+
+            <div class="cl-body">
+              <div class="cl-radios">
+                <label class="cl-radio-btn">
+                  <input
+                    type="radio"
+                    name="neos"
+                    value="yes"
+                    checked
+                    onchange="calc7()"
+                  />
+                  Yes — all three funds operating normally
+                </label>
+
+                <label class="cl-radio-btn">
+                  <input
+                    type="radio"
+                    name="neos"
+                    value="no"
+                    onchange="calc7()"
+                  />
+                  No — fund closed or restructured
+                </label>
+              </div>
+
+              <div class="cl-result" id="r9"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAX & RISKS -->
+
+      <section id="tax">
+        <h2>Tax Strategy &amp; Risks</h2>
+
+        <div class="two-col" style="margin-bottom: 20px">
+          <div class="info-card">
+            <h4>Account Placement</h4>
+
+            <ul>
+              <li>All Reserve, Income Engine, Growth assets → <strong>taxable Fidelity accounts</strong></li>
+
+              <li>
+                Growth must be taxable — harvest trigger requires access before age
+                59.5
+              </li>
+
+              <li>
+                Roth IRA withdrawals before 59.5 = 10% penalty on earnings
+              </li>
+
+              <li>
+                SPYI/QQQI: Section 1256 → 60% LTCG / 40% STCG (far better than
+                ordinary income)
+              </li>
+
+              <li>
+                ~86–96% of distributions are ROC — deferred tax, effectively tax-free until cost basis depletes (~8 years per lot)
+              </li>
+
+              <li>
+                Step-up in basis at death = potentially $0 capital gains for
+                heirs
+              </li>
+            </ul>
+          </div>
+
+          <div class="info-card">
+            <h4>Roth IRA (Separate — Not Part of Strategy)</h4>
+
+            <ul>
+              <li>Contribute $7,000/yr ($14,000 married)</li>
+
+              <li>Priority: SMH (yr 1) → GOOGL (yr 2) → QQQM (yr 3+)</li>
+
+              <li>Never harvest, never touch until age 60</li>
+
+              <li>Never include in health ratio calculation</li>
+
+              <li>Bonus tax-free wealth building alongside the strategy</li>
+
+              <li>At 60: becomes a tax-free bonus pool</li>
+            </ul>
+          </div>
+        </div>
+
+        <h3
+          style="
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--navy);
+            margin-bottom: 12px;
+          "
+        >
+          Known Risks
+        </h3>
+
+        <div class="risk-item warn">
+          <strong>Short Track Record</strong>
+
+          QQQI launched September 2023, BTCI late 2024. All yield history is from an elevated-VIX post-COVID environment. A sustained low-VIX decade (like 2012–2019) would compress QQQI/SPYI yields to 8–10%. Monitor annually — if QQQI drops below 10% or SPYI below 8%, recalculate. Contingency (Section 1256 alternatives): QQQI → QDTE · SPYI → XDTE · BTCI → reduce to 0%, hold cash in Reserve · IAUI → YGLD. Secondary: QYLD/XYLD (Global X) — also Section 1256, but historically steeper NAV erosion. Do NOT use JEPI/JEPQ: ELN-based, 100% ordinary income, no ROC, no Section 1256 — eliminates California tax advantage immediately.
+        </div>
+
+        <div class="risk-item warn">
+          <strong>⚠ Contingency Fund Tax Warning</strong>
+
+          Contingency funds use QDTE/XDTE (Roundhill, Section 1256 index options) — tax treatment is preserved. Do NOT substitute JEPI or JEPQ: they use equity-linked notes (ELNs) with 100% ordinary income and no ROC component. Switching to ELN funds eliminates the entire California tax advantage immediately. Any contingency switch is a permanent tax regime change — update estimated quarterly payments that same quarter.
+        </div>
+
+        <div class="risk-item warn">
+          <strong>⚠ NEOS Manager Concentration</strong>
+
+          All four Income Engine funds (QQQI, SPYI, BTCI, IAUI) come from a single boutique provider. A regulatory change, strategy shift, fund closure, or IRS ruling against their ROC-generation method would affect the entire income engine simultaneously. Review NEOS fund AUM and operating status each January. If any fund closes, activate its contingency immediately — do not wait for the annual review. <strong>Specific "loss of faith" triggers:</strong> IRS ruling against synthetic ROC generation via Section 1256 index options; NEOS portfolio management team departure; AUM drops below $500M on any core fund (liquidity risk).
+        </div>
+
+        <div class="risk-item warn">
+          <strong>BTCI Volatility</strong>
+
+          Bitcoin can drop 50–70% in a bear market. At 10% of Income Engine, a 70% BTC crash reduces Income Engine value by ~4.5%. Meaningful but not catastrophic — Reserve and Growth absorb the income shortfall. Bitcoin IV also tends to spike during crashes, which may partially sustain BTCI distributions even as NAV falls.
+        </div>
+
+        <div class="risk-item warn">
+          <strong>California Tax — Fully Modeled with Actual ROC Percentages</strong>
+
+          All projections use actual NEOS ROC data: QQQI 95.8%, SPYI 93.9%, BTCI 86%, IAUI ~92%. Effective tax rate is ~0% in years 1–8 (standard deduction absorbs tiny ordinary portion), rising to 5–9% long-run (median) as LTCG phases in. CA has no preferential LTCG rate — all eventually taxed as ordinary income. The 100% success rates already account for this. At death, step-up eliminates all deferred gains. ROC percentages can change year to year — monitor annual 1099-DIVs.
+        </div>
+      </section>
+
+      <!-- TEST PORTFOLIO -->
+      <section id="test-portfolio">
+        <h2>Scenario C — $100k Income Engine</h2>
+
+        <p style="font-size:15px;color:var(--gray-600);margin-bottom:20px;font-style:italic;">
+          Scenario C at 1/7th scale — same rules, same ratios
+        </p>
+
+        <!-- Current Allocation Table -->
+        <p style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:8px">Current Allocation</p>
+        <table>
+          <thead>
+            <tr><th></th><th>Asset</th><th>Amount</th><th>Monthly Income</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="bucket-b1">Reserve</span></td>
+              <td>SPAXX</td>
+              <td class="amount">$10,000</td>
+              <td class="amount" style="color:var(--gray-400)">—</td>
+            </tr>
+            <tr>
+              <td><span class="bucket-b2">Inc. Engine</span></td>
+              <td>QQQI 40%</td>
+              <td class="amount">$40,000</td>
+              <td class="amount" style="color:var(--green)">$470</td>
+            </tr>
+            <tr>
+              <td><span class="bucket-b2">Inc. Engine</span></td>
+              <td>SPYI 35%</td>
+              <td class="amount">$35,000</td>
+              <td class="amount" style="color:var(--green)">$353</td>
+            </tr>
+            <tr>
+              <td><span class="bucket-b2">Inc. Engine</span></td>
+              <td>BTCI 10%</td>
+              <td class="amount">$10,000</td>
+              <td class="amount" style="color:var(--green)">$220</td>
+            </tr>
+            <tr>
+              <td><span class="bucket-b2">Inc. Engine</span></td>
+              <td>IAUI 15%</td>
+              <td class="amount">$15,000</td>
+              <td class="amount" style="color:var(--green)">$153</td>
+            </tr>
+          </tbody>
+          <tfoot>
+            <tr>
+              <td><strong>Total</strong></td>
+              <td></td>
+              <td class="amount"><strong>$110,000</strong></td>
+              <td class="amount"><strong>$1,196/mo</strong></td>
+            </tr>
+          </tfoot>
+        </table>
+
+        <div style="display:flex;gap:24px;flex-wrap:wrap;margin-bottom:20px;margin-top:4px;font-size:13px;color:var(--gray-600)">
+          <span>Blended yield: <strong style="color:var(--navy)">14.35%</strong></span>
+          <span>Monthly bills: <strong>~$700</strong></span>
+          <span>Monthly surplus: <strong style="color:var(--green)">~$496</strong></span>
+        </div>
+
+        <!-- Monthly Cash Flow -->
+        <p style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:8px">Monthly Cash Flow</p>
+        <pre class="monthly-example"><span class="ex-label">Distributions auto-transfer to Reserve weekly.    </span>
+<span class="ex-label">Pay bills from Reserve as normal ($700/mo).       </span>
+
+<span class="ex-comment">Quarterly: Reserve balance − (3× annual bills)</span>
+<span class="ex-comment">  Target: $25,200  (3 × $8,400)</span>
+<span class="ex-comment">  Currently $10,000 — shortfall $15,200 → skip reinvestment (~30 months to fill)</span>
+
+<span class="ex-comment">After Reserve reaches $25,200: reinvest quarterly surplus 40/35/10/15</span>
+  <span class="ex-arrow">→</span> QQQI:  <span class="ex-dollar">$198/mo</span>   <span class="ex-label">SPYI:</span> <span class="ex-dollar">$174/mo</span>   <span class="ex-label">BTCI:</span> <span class="ex-dollar">$50/mo</span>   <span class="ex-label">IAUI:</span> <span class="ex-dollar">$74/mo</span></pre>
+
+        <!-- Two-col: B1 Status + Rebalancing -->
+        <div class="two-col" style="margin-top:20px;margin-bottom:20px">
+
+          <!-- Reserve Status Card -->
+          <div style="background:var(--amber-bg);border:1px solid #fcd34d;border-radius:10px;padding:20px;border-top:4px solid var(--amber)">
+            <p style="font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--amber);margin-bottom:8px">Reserve Status — Building</p>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+              <div>
+                <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.06em;color:#92400e;opacity:0.75">Current</div>
+                <div style="font-size:18px;font-weight:700;color:#92400e">$10,000</div>
+              </div>
+              <div>
+                <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.06em;color:#92400e;opacity:0.75">Target (3×)</div>
+                <div style="font-size:18px;font-weight:700;color:#92400e">$25,200</div>
+              </div>
+              <div>
+                <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.06em;color:#92400e;opacity:0.75">Warning Level</div>
+                <div style="font-size:16px;font-weight:700;color:var(--red)">$2,100</div>
+              </div>
+              <div>
+                <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.06em;color:#92400e;opacity:0.75">Shortfall</div>
+                <div style="font-size:16px;font-weight:700;color:var(--red)">$15,200</div>
+              </div>
+            </div>
+            <p style="font-size:12px;color:#92400e;line-height:1.5">Skip reinvestment until Reserve = $25,200 — let it build via incoming distributions</p>
+          </div>
+
+          <!-- Rebalancing Card -->
+          <div style="background:var(--gray-50);border:1px solid var(--gray-200);border-radius:10px;padding:20px;border-top:4px solid var(--navy-light)">
+            <p style="font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--navy-light);margin-bottom:8px">Rebalancing Note</p>
+            <p style="font-size:13px;color:var(--gray-600);margin-bottom:10px">
+              Old income (65/25/10): <strong>$1,236/mo</strong> → New (40/35/10/15): <strong>$1,196/mo</strong>
+              <span style="color:var(--amber)"> (−$40/mo for gold diversification)</span>
+            </p>
+            <p style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:6px">To rebalance:</p>
+            <ul style="font-size:13px;color:var(--gray-600);line-height:1.8;padding-left:16px">
+              <li><strong style="color:var(--red)">SELL</strong> $25,000 QQQI</li>
+              <li><strong style="color:var(--green)">BUY</strong> $10,000 SPYI</li>
+              <li><strong style="color:var(--green)">BUY</strong> $15,000 IAUI <span style="color:var(--gray-400)">(new ETF — add to brokerage)</span></li>
+            </ul>
+            <p style="font-size:12px;color:var(--gray-400);margin-top:10px;line-height:1.5"><em>Alternative: redirect surplus to SPYI+IAUI for 3–4 yrs (no sell, no tax event)</em></p>
+          </div>
+        </div>
+
+        <!-- Discretionary Formula Summary Card -->
+        <div style="background:var(--navy-pale);border:1px solid #bfdbfe;border-radius:8px;padding:16px 20px;margin-bottom:24px">
+          <p style="font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--navy);margin-bottom:8px">Discretionary Formula</p>
+          <p style="font-size:14px;color:var(--navy);line-height:1.8;font-family:'Cascadia Code','Fira Code','Courier New',monospace">
+            Year 10 projection: Income $28,300 &minus; Base spend $8,400 &minus; Engine maintenance $13,000 <span style="color:var(--gray-400)">(Inc. Engine $217k × 6%)</span>
+            = <strong>$6,900/yr (~$575/mo) max discretionary</strong>
+          </p>
+        </div>
+
+        <!-- Interactive Calculator -->
+        <div style="background:var(--gray-50);border:1px solid var(--gray-200);border-radius:10px;padding:24px">
+          <p style="font-size:13px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px">Scale Your Own Scenario C</p>
+          <p style="font-size:13px;color:var(--gray-600);margin-bottom:16px">Enter your Income Engine value and monthly bills to see projected income, surplus, Reserve target, and discretionary room.</p>
+
+          <div class="cl-inputs" style="margin-bottom:16px">
+            <div class="cl-field wide">
+              <label>Your Income Engine value ($)</label>
+              <input
+                type="text"
+                inputmode="numeric"
+                class="cl-dollar"
+                id="tp-b2"
+                placeholder="e.g. 100,000"
+                oninput="fmtInput(this); calcTP()"
+              />
+            </div>
+            <div class="cl-field wide">
+              <label>Monthly bills ($)</label>
+              <input
+                type="text"
+                inputmode="numeric"
+                class="cl-dollar"
+                id="tp-bills"
+                placeholder="e.g. 700"
+                oninput="fmtInput(this); calcTP()"
+              />
+            </div>
+          </div>
+
+          <button
+            onclick="calcTP()"
+            style="padding:9px 20px;background:var(--navy);color:white;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;font-family:var(--font);letter-spacing:0.02em"
+          >Calculate</button>
+
+          <div class="cl-result" id="tp-result" style="margin-top:16px"></div>
+        </div>
+      </section>
+
+      <!-- 4% RULE COMPARISON -->
+      <section id="compare">
+        <h2>vs The 4% Rule (California, Single, After-Tax)</h2>
+
+        <table>
+          <thead>
+            <tr><th>Strategy</th><th>Capital Required</th><th>Annual Income</th><th>40-yr Success</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>VOO index fund (4% rule)</td>
+              <td>$1,500,000</td><td>$60k/yr</td>
+              <td style="color:var(--amber);font-weight:600">~83% (pre-tax)</td>
+            </tr>
+            <tr>
+              <td>VOO index fund (4% rule)</td>
+              <td>$2,500,000</td><td>$100k/yr</td>
+              <td style="color:var(--amber);font-weight:600">~95% (pre-tax)</td>
+            </tr>
+            <tr style="background:var(--navy-pale)">
+              <td><strong>This strategy — Scenario A</strong></td>
+              <td><strong>$1,080,000</strong></td><td><strong>$60k/yr</strong></td>
+              <td style="color:var(--green);font-weight:700">100% (after CA tax)</td>
+            </tr>
+            <tr style="background:var(--navy-pale)">
+              <td><strong>This strategy — Scenario B</strong></td>
+              <td><strong>$1,850,000</strong></td><td><strong>$100k/yr</strong></td>
+              <td style="color:var(--green);font-weight:700">100% (after CA tax)</td>
+            </tr>
+            <tr style="background:var(--navy-pale)">
+              <td><strong>This strategy — Scenario C (test)</strong></td>
+              <td><strong>$125,200</strong></td><td><strong>$8,400/yr</strong></td>
+              <td style="color:var(--green);font-weight:700">100% (after CA tax)</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <p style="font-size:13px;color:var(--gray-600);margin-top:8px">
+          The 4% rule requires $2.5M for $100k/yr and those success rates are pre-tax from an index fund — your California tax bill on distributions would reduce them further. This strategy achieves $100k/yr from $1.85M at 100% confidence <em>including all California taxes</em> — and those taxes are near zero for the first 8 years.
+        </p>
+      </section>
+
+      <footer>
+        Generated 2026 &nbsp;·&nbsp; For personal use only &nbsp;·&nbsp; Not
+        financial advice &nbsp;·&nbsp; Review annually
+      </footer>
+    </main>
+
+    <script>
+
+
+      // ── Nav scroll highlighting ──────────────────────────────
+
+
+      const sections = document.querySelectorAll('section[id]');
+
+
+      const navLinks = document.querySelectorAll('.nav-link');
+
+
+      const observer = new IntersectionObserver((entries) => {
+
+
+        entries.forEach(entry => {
+
+
+          if (entry.isIntersecting) {
+
+
+            navLinks.forEach(l => l.classList.remove('active'));
+
+
+            const link = document.querySelector(`.nav-link[href="#${entry.target.id}"]`);
+
+
+            if (link) link.classList.add('active');
+
+
+          }
+
+
+        });
+
+
+      }, { rootMargin: '-20% 0px -70% 0px' });
+
+
+      sections.forEach(s => observer.observe(s));
+
+
+      navLinks.forEach(link => {
+
+
+        link.addEventListener('click', e => {
+
+
+          e.preventDefault();
+
+
+          const t = document.querySelector(link.getAttribute('href'));
+
+
+          if (t) t.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+
+        });
+
+
+      });
+
+
+
+
+
+      // ── Helpers ─────────────────────────────────────────────
+
+
+      // Scenario A = $1,080,000/$60k (after CA tax), Scenario B = $1,850,000/$100k
+      // Checklist defaults to Scenario B; user picks scenario via selector
+      const SCENARIOS = {
+        A: { capital: 1080000,  spend: 60000,  bearFloor: 42000,  label: 'A ($1.08M / $60k/yr)' },
+        B: { capital: 1850000,  spend: 100000, bearFloor: 70000,  label: 'B ($1.85M / $100k/yr)' }
+      };
+
+      let activeScenario = 'B';
+
+      function getScenario() { return SCENARIOS[activeScenario]; }
+
+      const ANNUAL_RAISE     = 0.03;
+
+      const B3_BASE          = 200000;
+
+
+
+
+
+      const fmt      = n => (isNaN(n) || n === null) ? '—' : '$' + Math.round(n).toLocaleString();
+
+
+      const fmtPct   = n => (isNaN(n) || n === null) ? '—' : n.toFixed(1) + '%';
+
+
+      const fmtRatio = n => (isNaN(n) || n === null) ? '—' : n.toFixed(3);
+
+
+
+
+
+      // ── Dollar input formatting ──────────────────────────────
+
+
+      function fmtInput(el) {
+
+
+        const fromEnd  = el.value.length - (el.selectionStart || 0);
+
+
+        const raw      = el.value.replace(/[^0-9]/g, '');
+
+
+        if (!raw) return;
+
+
+        el.value = raw.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+
+
+        const newPos = Math.max(0, el.value.length - fromEnd);
+
+
+        try { el.setSelectionRange(newPos, newPos); } catch(e) {}
+
+
+      }
+
+
+
+
+
+      // Read a dollar text field (strips commas before parsing)
+
+
+      function parseNum(id) {
+
+
+        const el = document.getElementById(id);
+
+
+        if (!el) return NaN;
+
+
+        const v = parseFloat(el.value.replace(/,/g, ''));
+
+
+        return isNaN(v) ? NaN : v;
+
+
+      }
+
+
+
+
+
+      // Copy a dollar field to a target field if target is still empty
+      function autoFill(srcId, destId) {
+        const src  = document.getElementById(srcId);
+        const dest = document.getElementById(destId);
+        if (!src || !dest) return;
+        dest.value = src.value;
+        debounce('calc3', calc3);
+      }
+
+      // Write a formatted dollar value to a text field
+
+
+      function setNum(id, value) {
+
+
+        const el = document.getElementById(id);
+
+
+        if (!el) return;
+
+
+        el.value = Math.round(value).toLocaleString('en-US');
+
+
+      }
+
+
+
+
+
+      function showResult(id, html, color) {
+
+
+        const el = document.getElementById(id);
+
+
+        el.innerHTML = html;
+
+
+        el.className = 'cl-result visible ' + color;
+
+
+      }
+
+
+      function hideResult(id) {
+
+
+        document.getElementById(id).className = 'cl-result';
+
+
+      }
+
+
+      function toggleDone(n) {
+
+
+        const item = document.getElementById('item' + n);
+
+
+        const cb   = document.getElementById('c' + n);
+
+
+        item.classList.toggle('done', cb.checked);
+
+
+      }
+
+
+
+
+
+      // ── Debounce: prevent calc firing on every keystroke ────
+
+
+      const debounceTimers = {};
+
+
+      function debounce(key, fn, ms = 600) {
+
+
+        clearTimeout(debounceTimers[key]);
+
+
+        debounceTimers[key] = setTimeout(fn, ms);
+
+
+      }
+
+
+
+
+
+      // ── Global state shared across checks ───────────────────
+
+
+      let globalPortfolio   = null;
+
+
+      let globalYears       = null;
+
+
+      let globalBaseline    = null;
+
+
+      let healthRatio       = null;
+
+
+      let globalExpSpend    = null;   // expected spend = $100k × 1.02^(years-1)
+
+
+      let newAnnualSpend    = null;
+
+
+
+
+
+      function updateGlobalBar() {
+
+
+        const bar = document.getElementById('global-bar');
+
+
+        if (!globalPortfolio || !globalYears) { bar.classList.remove('visible'); return; }
+
+
+        bar.classList.add('visible');
+
+
+        document.getElementById('g-portfolio').textContent = fmt(globalPortfolio);
+
+
+        document.getElementById('g-years').textContent     = globalYears + ' yr' + (globalYears !== 1 ? 's' : '');
+
+
+        document.getElementById('g-baseline').textContent  = fmt(globalBaseline);
+
+
+        document.getElementById('g-ratio').textContent     = fmtRatio(healthRatio);
+
+
+        document.getElementById('g-spend').textContent     = fmt(globalExpSpend);
+
+
+      }
+
+
+
+
+
+      // ── CHECK 1: Health Ratio ────────────────────────────────
+
+
+      function calc1() {
+
+
+        const portfolio = parseNum('i1-portfolio');
+
+
+        const years     = parseFloat(document.getElementById('i1-years').value);
+
+
+
+
+
+        // Guard: must be valid numbers in sensible ranges
+
+
+        if (!portfolio || portfolio <= 0 || !years || years < 1 || years > 40) {
+
+
+          hideResult('r1');
+
+
+          globalPortfolio = null; globalYears = null; globalBaseline = null;
+
+
+          healthRatio = null; globalExpSpend = null;
+
+
+          updateGlobalBar();
+
+
+          calc2(); calc5();
+
+
+          return;
+
+
+        }
+
+
+
+
+
+        // Store globals
+        const sc = getScenario();
+
+        globalPortfolio = portfolio;
+
+
+        globalYears     = years;
+
+
+        globalBaseline  = sc.capital * Math.pow(1 + ANNUAL_RAISE, years);
+
+
+        healthRatio     = portfolio / globalBaseline;
+
+
+        // Expected current spend: starting spend raised 3%/yr for (years-1) full raises
+
+
+        globalExpSpend  = sc.spend * Math.pow(1 + ANNUAL_RAISE, years - 1);
+
+        // Update baseline label
+        const bl = document.getElementById('g-baseline-label');
+        if (bl) bl.textContent = 'Baseline (' + (sc.capital/1e6).toFixed(2).replace(/\.?0+$/, '') + 'M × 1.03ⁿ)';
+
+
+
+
+
+        updateGlobalBar();
+
+
+
+
+
+        // Auto-fill current spend in item 2 only if blank
+
+
+        // Always sync expected spend — user can override in check 2
+
+
+        setNum('i2-spend', globalExpSpend);
+
+        // Auto-fill original target for this year: starting spend × 1.03^years
+        const origTarget = sc.spend * Math.pow(1 + ANNUAL_RAISE, years);
+        setNum('i2-target', origTarget);
+
+        debounce('c2', calc2, 50);
+
+
+
+
+
+        // Sync current portfolio into Bear Market Monitor
+
+
+        setNum('bm-current', portfolio);
+
+
+        debounce('bm', calcBearMonitor, 50);
+
+
+
+
+
+        const ratio = healthRatio;
+
+
+        let color, tier, action;
+
+
+        if      (ratio >= 0.90) { color='blue';  tier='HEALTHY'; action='Raise spending 3% — on track'; }
+
+
+        else if (ratio >= 0.75) { color='amber'; tier='CAUTION'; action='Freeze spending — no raise this year'; }
+
+
+        else                    { color='red';   tier='STRESS';  action='Cut spending 15% (check cuts used below)'; }
+
+
+
+
+
+        showResult('r1', `
+
+
+          <div class="res-row">
+
+
+            <div class="res-item"><div class="res-label">Portfolio</div><div class="res-val">${fmt(portfolio)}</div></div>
+
+
+            <div class="res-item"><div class="res-label">Baseline</div><div class="res-val">${fmt(globalBaseline)}</div></div>
+
+
+            <div class="res-item"><div class="res-label">Ratio</div><div class="res-val">${fmtRatio(ratio)}</div></div>
+
+
+            <div class="res-item"><div class="res-label">Status</div><div class="res-val"><strong>${tier}</strong></div></div>
+
+
+          </div>
+
+
+          <div style="margin-top:8px;font-size:13px;"><strong>→ Action:</strong> ${action}</div>
+
+
+          <div style="margin-top:4px;font-size:12px;color:inherit;opacity:0.75;">Expected spend this year: ${fmt(globalExpSpend)} — pre-filled in check 2.</div>
+
+
+        `, color);
+
+
+
+
+
+        calc2(); calc5();
+
+
+      }
+
+
+
+
+
+      // ── CHECK 2: Income-Based Spending Rule ─────────────────
+
+      function calc2() {
+
+        const income     = parseNum('i2-income');
+        const spend      = parseNum('i2-spend');
+
+        // Original target: auto-filled from check 1, or entered manually
+        const origTarget = parseNum('i2-target') || null;
+
+        if (!spend || spend <= 0) { hideResult('r2'); newAnnualSpend = null; calc5(); calc6(); return; }
+
+
+
+
+        let newSpend, action, color, extraNote = '';
+        let crisisNote = '';
+
+        if (!income || income <= 0) {
+          // No income entered — estimate 3% raise
+          newSpend = spend * (1 + ANNUAL_RAISE);
+          action   = 'Enter last 12 months income above to apply income-based rules. Estimated 3% raise shown.';
+          color    = 'gray';
+        } else if (origTarget && income > 1.5 * origTarget) {
+          // Tier 1: Income > 1.5x original target → SNAP to 100% of target
+          newSpend = origTarget;
+          action   = 'Income is ' + fmtPct(income / origTarget * 100) + ' of original target — Reset to 100% of spend target (full restoration)';
+          extraNote = 'Income ' + fmt(income) + ' > 1.5x target ' + fmt(origTarget);
+          color    = 'green';
+        } else if (income > 1.3 * spend) {
+          // Tier 2: Income > 1.3x current spend → step up 15-25% toward original target
+          const stepUp20 = spend * 1.20;
+          if (origTarget && stepUp20 > origTarget) {
+            newSpend = origTarget;
+            action   = 'Step up capped at spend target (' + fmt(origTarget) + ')';
+          } else {
+            newSpend = stepUp20;
+            action   = 'Step up 20% toward spend target — income is strong';
+          }
+          extraNote = 'Income ' + fmt(income) + ' > 1.3x spend ' + fmt(spend * 1.3);
+          color    = 'green';
+        } else if (income >= spend) {
+          // Tier 3: Income >= current spend → 3% raise, capped at original target
+          const raised = spend * 1.03;
+          if (origTarget && raised > origTarget) {
+            newSpend = origTarget;
+            action   = 'Raise capped at spend target (' + fmt(origTarget) + ') — would have been ' + fmt(raised) + ' at 3%';
+          } else {
+            newSpend = raised;
+            action   = 'Raise 3% — normal year (income covers spend)';
+          }
+          extraNote = 'Income ' + fmt(income) + ' >= spend ' + fmt(spend);
+          color    = 'blue';
+        } else {
+          // Tier 4: Income < current spend → hold spend, B1 bridges
+          newSpend = spend;
+          action   = 'Keep monthly spend unchanged (same dollar amount, no raise) — Reserve bridges the shortfall automatically.';
+          extraNote = 'Income ' + fmt(income) + ' < spend ' + fmt(spend) + ' — Reserve bridges ' + fmt(spend - income) + '/yr shortfall';
+          color    = 'amber';
+
+          // Crisis check: B1 < 3mo spend AND income < 70% of spend
+          const b1 = parseNum('i5-b1');
+          const monthlySpend = spend / 12;
+          const warningB1 = monthlySpend * 3;
+          if (b1 > 0 && b1 < warningB1 && income < spend * 0.70) {
+            const cutCandidate = spend * 0.85;
+            const floorAmt = origTarget ? origTarget * 0.80 : null;
+            const crisisCut = floorAmt ? Math.max(cutCandidate, floorAmt) : cutCandidate;
+            crisisNote = '<div style="margin-top:8px;padding:8px 12px;background:var(--red-bg);border:1px solid #fecaca;border-radius:6px;color:#7f1d1d;font-size:12px">'
+              + '<strong>Crisis condition detected:</strong> Reserve &lt; 3 months of spend AND income &lt; 70% of spend. '
+              + 'Crisis cut: new spend = ' + fmt(crisisCut)
+              + (floorAmt ? ' (floor: 80% of target = ' + fmt(floorAmt) + ')' : '') + '</div>';
+            color = 'red';
+          }
+        }
+
+        newAnnualSpend = newSpend;
+
+
+        showResult('r2', `
+          <div class="res-row">
+            <div class="res-item"><div class="res-label">Rule Applied</div><div class="res-val" style="font-size:13px">${action}</div></div>
+          </div>
+          <div class="res-row" style="margin-top:10px">
+            <div class="res-item"><div class="res-label">New Annual Spend</div><div class="res-val">${fmt(newSpend)}</div></div>
+            <div class="res-item"><div class="res-label">New Monthly</div><div class="res-val">${fmt(newSpend / 12)}</div></div>
+            <div class="res-item"><div class="res-label">Change vs Now</div><div class="res-val">${newSpend >= spend ? '+' : ''}${fmt(newSpend - spend)}</div></div>
+          </div>
+          ${extraNote ? `<div style="margin-top:6px;font-size:12px;opacity:0.8">${extraNote}</div>` : ''}
+          ${crisisNote}
+        `, color);
+
+        calc5(); calc6();
+      }
+
+
+      // ── CHECK 3: B3 Harvest ──────────────────────────────────
+
+
+      function calc3() {
+        const b2now  = parseNum('i3-b2now');
+        const b2prev = parseNum('i3-b2prev');
+        const spend  = parseNum('i3-spend');
+        const b3     = parseNum('i3-b3');
+        const b3ath  = parseNum('i3-b3ath');
+
+        if (!b2now || !b2prev || !b3 || !spend) { hideResult('r3'); return; }
+
+        const declined   = b2now < b2prev;
+        const threshold  = spend * 2;
+        const thin       = b2now < threshold;
+        const athFloor   = b3ath ? b3ath * 0.85 : null;
+        const aboveATH   = athFloor === null || b3 >= athFloor;
+        const gains      = Math.max(b3 - 200000, 0);
+        const harvest    = gains * 0.75;
+        const qqqi_buy   = harvest * 0.40;
+        const spyi_buy   = harvest * 0.35;
+        const btci_buy   = harvest * 0.10;
+        const iaui_buy   = harvest * 0.15;
+
+        if (!declined) {
+          showResult('r3', '<strong>No harvest.</strong> Income Engine income is up year-over-year (' + fmt(b2now) + ' vs ' + fmt(b2prev) + '). Growth compounds untouched.', 'green');
+          return;
+        }
+
+        if (!thin) {
+          showResult('r3', '<strong>No harvest needed.</strong> Income declined but surplus is still healthy — income ' + fmt(b2now) + ' is above the 2× spend threshold of ' + fmt(threshold) + '. Harvesting would generate unnecessary California capital gains taxes.', 'green');
+          return;
+        }
+
+        if (!aboveATH) {
+          showResult('r3', '<strong>No harvest — Growth below ATH floor.</strong> Growth (' + fmt(b3) + ') is more than 15% below its all-time high of ' + fmt(b3ath) + ' (floor: ' + fmt(athFloor) + '). Selling at a depressed bottom would lock in sequence-of-returns losses. Wait for recovery.', 'amber');
+          return;
+        }
+
+        if (gains <= 0) {
+          showResult('r3', '<strong>All 4 conditions met</strong> but Growth has no gains above the $200k baseline (Growth = ' + fmt(b3) + '). No harvest possible.', 'amber');
+          return;
+        }
+
+        showResult('r3', '<strong>Harvest triggered.</strong> All 4 conditions met.<div class="res-row" style="margin-top:8px"><div class="res-item"><div class="res-label">Income decline</div><div class="res-val">' + fmt(b2prev - b2now) + '</div></div><div class="res-item"><div class="res-label">Growth gains above $200k</div><div class="res-val">' + fmt(gains) + '</div></div><div class="res-item"><div class="res-label">Harvest (75%)</div><div class="res-val">' + fmt(harvest) + '</div></div><div class="res-item"><div class="res-label">Buy QQQI (40%)</div><div class="res-val">' + fmt(qqqi_buy) + '</div></div><div class="res-item"><div class="res-label">Buy SPYI (35%)</div><div class="res-val">' + fmt(spyi_buy) + '</div></div><div class="res-item"><div class="res-label">Buy BTCI (10%)</div><div class="res-val">' + fmt(btci_buy) + '</div></div><div class="res-item"><div class="res-label">Buy IAUI (15%)</div><div class="res-val">' + fmt(iaui_buy) + '</div></div></div>', 'amber');
+      }
+
+      // ── CHECK 4: B2 Ratio Check ────────────────────────────────────────
+
+      function calc4() {
+
+        const b2total = parseNum('i4-b2total');
+        const qVal    = parseNum('i4-qqqi-val');
+        const sVal    = parseNum('i4-spyi-val');
+        const bVal    = parseNum('i4-btci-val');
+        const iVal    = parseNum('i4-iaui-val');
+
+        if (!b2total || b2total <= 0) { hideResult('r4'); return; }
+
+        const anyEntered = !isNaN(qVal) || !isNaN(sVal) || !isNaN(bVal) || !isNaN(iVal);
+        if (!anyEntered) { hideResult('r4'); return; }
+
+        // Compute percentages from dollar amounts
+        const qPct = !isNaN(qVal) ? (qVal / b2total) * 100 : NaN;
+        const sPct = !isNaN(sVal) ? (sVal / b2total) * 100 : NaN;
+        const bPct = !isNaN(bVal) ? (bVal / b2total) * 100 : NaN;
+        const iPct = !isNaN(iVal) ? (iVal / b2total) * 100 : NaN;
+
+        // Bands: [target, lower, upper]
+        const bands = {
+          QQQI: { target: 40, lower: 38, upper: 42, pct: qPct, val: qVal },
+          SPYI: { target: 35, lower: 33, upper: 37, pct: sPct, val: sVal },
+          BTCI: { target: 10, lower:  8, upper: 12, pct: bPct, val: bVal },
+          IAUI: { target: 15, lower: 13, upper: 17, pct: iPct, val: iVal }
+        };
+
+        const etfs = Object.keys(bands);
+
+        // Build per-ETF status rows
+        let rows = '<div class="res-row" style="flex-wrap:wrap;gap:16px;margin-bottom:10px">';
+        let hasIssue = false;
+        let hasBelowLower = false;
+        let hasAboveUpper = false;
+
+        etfs.forEach(name => {
+          const { target, lower, upper, pct, val } = bands[name];
+          if (isNaN(pct)) return;
+
+          let statusColor, statusText;
+          if (pct < lower) {
+            hasBelowLower = true;
+            hasIssue = true;
+            statusColor = 'var(--navy-light)';
+            statusText = 'Below ' + lower + '% — redirect surplus';
+          } else if (pct > upper) {
+            hasAboveUpper = true;
+            hasIssue = true;
+            statusColor = 'var(--amber)';
+            statusText = 'Above ' + upper + '% — redirect surplus to underweight ETFs (no selling)';
+          } else {
+            statusColor = 'var(--green)';
+            statusText = 'In range ✓';
+          }
+
+          rows += '<div class="res-item">'
+            + '<div class="res-label">' + name + ' ' + fmt(val) + ' (target ' + target + '%, band ' + lower + '–' + upper + '%)</div>'
+            + '<div class="res-val" style="color:' + statusColor + '">' + fmtPct(pct) + ' — ' + statusText + '</div>'
+            + '</div>';
+        });
+
+        rows += '</div>';
+
+        // Action guidance
+        let actionLines = [];
+        if (hasBelowLower) {
+          actionLines.push('<strong>Below lower bound:</strong> Do NOT sell other ETFs. Redirect 100% of that month\'s surplus to the underweight ETF until it climbs back into range. No selling, no tax event.');
+        }
+        if (hasAboveUpper) {
+          actionLines.push('<strong>Above upper cap:</strong> Redirect ALL surplus to underweight ETFs — no selling, no taxable event. Ratios correct naturally over months of reinvestment.');
+        }
+        if (!hasIssue) {
+          actionLines.push('All ETFs are within their target bands. Monthly 40/35/10/15 reinvestment is working as intended.');
+        }
+
+        const actionHTML = '<div style="font-size:13px;line-height:1.7">' + actionLines.join('<br>') + '</div>';
+
+        const color = !hasIssue ? 'green' : (hasBelowLower && !hasAboveUpper) ? 'blue' : 'amber';
+
+        showResult('r4', rows + actionHTML, color);
+
+      }
+
+
+      // ── CHECK 5: B1 Target ───────────────────────────────────
+
+
+      function calc5() {
+
+
+        const b1    = parseNum('i5-b1');
+
+
+        const spend = newAnnualSpend || parseNum('i2-spend');
+
+
+        if (!b1 || !spend) { hideResult('r5'); return; }
+
+
+        // Formula: target = max(spend x 3.0, original scenario target x 1.5)
+        const sc = getScenario();
+        const origTarget = sc.spend * 1.5; // baseline from scenario
+        const target    = Math.max(spend * 3.0, origTarget);
+
+
+
+        const lowerFloor= target * 0.5;
+
+
+        const diff      = b1 - target;
+
+
+        // Monthly warning threshold: 3 months of spend
+        const warnThreshold = (spend / 12) * 3;
+        const monthlyWarn   = b1 < warnThreshold
+          ? `<div style="margin-top:8px;padding:8px 10px;background:var(--amber-bg);border:1px solid var(--amber);border-radius:6px;font-size:12px;color:#78350f;font-weight:600;">&#9888; Warning threshold breached (Reserve &lt; ${fmt(warnThreshold)} = 3 months spend). Act this quarter: skip reinvestment, consider 10% spending cut, check Growth harvest trigger. If Reserve depleted: sell Growth — VOO then QQQM then VXUS then GOOGL then SMH.</div>`
+          : `<div style="margin-top:8px;font-size:12px;color:var(--gray-400);">Quarterly check: Reserve above ${fmt(warnThreshold)} warning threshold — no immediate action needed.</div>`;
+
+
+        let color, action;
+
+
+        if (b1 >= lowerFloor) {
+
+
+          color  = 'green';
+
+
+          const surplus = b1 - target;
+          action = surplus > 0
+            ? `Reserve healthy. Investable surplus = ${fmt(surplus)} → transfer to Income Engine this quarter.`
+            : 'Reserve is within healthy range. No action needed.';
+
+
+        } else {
+
+
+          const deficit = target - b1;
+
+
+          color  = 'red';
+
+
+          action = `Reserve is critically low. Skip ALL Income Engine reinvestment (deficit: ${fmt(deficit)}) — pause until restored (only if not in bear mode).`;
+
+
+        }
+
+
+
+
+        showResult('r5', `
+
+
+          <div class="res-row">
+
+
+            <div class="res-item"><div class="res-label">Reserve Balance</div><div class="res-val">${fmt(b1)}</div></div>
+
+
+            <div class="res-item"><div class="res-label">Target (spend × 3.0)</div><div class="res-val">${fmt(target)}</div></div>
+
+
+            <div class="res-item"><div class="res-label">Difference</div><div class="res-val">${diff >= 0 ? '+' : ''}${fmt(diff)}</div></div>
+
+
+          </div>
+
+
+          <div style="margin-top:6px"><strong>Annual Action:</strong> ${action}</div>
+          ${monthlyWarn}
+
+
+        `, color);
+
+
+      }
+
+
+
+
+
+      // ── BEAR MARKET MONITOR (standalone section) ───────────
+
+
+      function calcBearMonitor() {
+
+
+        const peak    = parseNum('bm-peak');
+
+
+        const current = parseNum('bm-current');
+
+
+        const resEl   = document.getElementById('bm-result');
+
+
+        if (!peak || !current || peak <= 0 || current <= 0) {
+
+
+          resEl.style.display = 'none';
+
+
+          [3,4,5].forEach(n => document.getElementById('item'+n).classList.remove('skipped'));
+
+
+          return;
+
+
+        }
+
+
+        const dd     = ((peak - current) / peak) * 100;
+
+
+        const isHigh = current > peak;
+
+
+        const bearOn = !isHigh && dd >= 15;
+
+
+        [3,4,5].forEach(n => document.getElementById('item'+n).classList.toggle('skipped', bearOn));
+
+
+        let bg, bdr, tc, flagName, actions;
+
+
+        if (isHigh || dd < 15) {
+
+
+          bg='#f0fdf4'; bdr='#bbf7d0'; tc='#14532d';
+
+
+          flagName = isHigh ? 'New All-Time High — update your peak!' : 'No Flag — Normal Operations';
+
+
+          actions = ['All annual checks active','Continue reinvesting Income Engine surplus 40/35/10/15 QQQI/SPYI/BTCI/IAUI','Reserve untouched'];
+
+
+        } else if (dd < 25) {
+
+
+          bg='#fffbeb'; bdr='#fde68a'; tc='#78350f';
+
+
+          flagName = 'Yellow Flag (-15%)';
+
+
+          actions = ['Pause annual checks 3–5 (no harvest, no redirects)','Keep reinvesting Income Engine surplus into Income Engine normally (40/35/10/15 QQQI/SPYI/BTCI/IAUI)','Reserve untouched — Income Engine income likely still covers spending','Consider spending below your target this year'];
+
+
+        } else if (dd < 40) {
+
+
+          bg='#fff7ed'; bdr='#fb923c'; tc='#7c2d12';
+
+
+          flagName = 'Orange Flag (-25%)';
+
+
+          actions = ['Pause annual checks 3–5','Keep reinvesting Income Engine surplus into Income Engine normally (40/35/10/15)','Voluntary 15% discretionary spending cut recommended','If Income Engine income &lt; spend: draw shortfall from Reserve only'];
+
+
+        } else {
+
+
+          bg='#fef2f2'; bdr='#fecaca'; tc='#991b1b';
+
+
+          flagName = 'Red Flag (-40%)';
+
+
+          const sc2 = getScenario(); actions = ['Pause all annual checks','Hard floor: A $42,000/yr · B $70,000/yr (your scenario: ' + fmt(sc2.bearFloor) + '/yr)','Spend Income Engine income first — draw shortfall from Reserve','Do NOT sell Income Engine or Growth — wait for recovery','Bear ends: S&P above 200-day MA for 3 consecutive months'];
+
+
+        }
+
+
+        const actHTML = actions.map(a => '<div style="padding:3px 0;font-size:13px">• ' + a + '</div>').join('');
+
+
+        resEl.style.display = 'block';
+
+
+        resEl.innerHTML = '<div style="background:'+bg+';border:1px solid '+bdr+';border-radius:8px;padding:16px 20px">'
+
+
+          + '<div style="display:flex;flex-wrap:wrap;gap:20px;margin-bottom:12px;align-items:baseline">'
+
+
+          + '<div><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:'+tc+';opacity:.7">Peak</div>'
+
+
+          +      '<div style="font-size:16px;font-weight:700;color:'+tc+'">' + fmt(peak) + '</div></div>'
+
+
+          + '<div><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:'+tc+';opacity:.7">Current</div>'
+
+
+          +      '<div style="font-size:16px;font-weight:700;color:'+tc+'">' + fmt(current) + '</div></div>'
+
+
+          + '<div><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:'+tc+';opacity:.7">Drawdown</div>'
+
+
+          +      '<div style="font-size:22px;font-weight:800;color:'+tc+'">' + (isHigh ? '+' : '-') + Math.abs(dd).toFixed(1) + '%</div></div>'
+
+
+          + '<div style="flex:1"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:'+tc+';opacity:.7">Status</div>'
+
+
+          +      '<div style="font-size:15px;font-weight:800;color:'+tc+'">' + flagName + '</div></div>'
+
+
+          + '</div><div style="border-top:1px solid '+bdr+';padding-top:10px;color:'+tc+'">' + actHTML + '</div></div>';
+
+
+      }
+
+
+
+      // -- CHECK 6: Yield Check
+
+      function calc6() {
+
+        const spyi = parseFloat(document.getElementById('i8-spyi').value);
+
+        const qqqi = parseFloat(document.getElementById('i8-qqqi').value);
+
+        const btci = parseFloat(document.getElementById('i8-btci').value);
+
+        if (!spyi && !qqqi && !btci) { hideResult('r8'); return; }
+
+        const spyiOk = !spyi || spyi >= 8;
+
+        const qqqiOk = !qqqi || qqqi >= 10;
+
+        const allThree = spyi && qqqi && btci;
+        const blended = allThree ? (qqqi * 0.65 + spyi * 0.25 + btci * 0.10) : null;
+
+        let html = '<div class="res-row">';
+
+        if (qqqi) html += '<div class="res-item"><div class="res-label">QQQI Yield</div><div class="res-val" style="color:' + (qqqiOk?'var(--green)':'var(--red)') + '">' + fmtPct(qqqi) + ' ' + (qqqiOk ? '&#10003;' : '&#9888;') + '</div></div>';
+
+        if (spyi) html += '<div class="res-item"><div class="res-label">SPYI Yield</div><div class="res-val" style="color:' + (spyiOk?'var(--green)':'var(--red)') + '">' + fmtPct(spyi) + ' ' + (spyiOk ? '&#10003;' : '&#9888;') + '</div></div>';
+
+        if (btci) html += '<div class="res-item"><div class="res-label">BTCI Yield</div><div class="res-val">' + fmtPct(btci) + '</div></div>';
+
+        if (blended) html += '<div class="res-item"><div class="res-label">Blended (65/25/10)</div><div class="res-val">' + fmtPct(blended) + '</div></div>';
+
+        html += '</div>';
+
+        if (!spyiOk || !qqqiOk) {
+
+          html += '<div style="margin-top:8px"><strong>Yields below threshold.</strong> Low-VIX environment may be compressing option premiums. Review plan.</div>';
+
+          showResult('r8', html, 'amber');
+
+        } else {
+
+          html += '<div style="margin-top:6px">Yields are healthy. Strategy operating as expected.</div>';
+
+          showResult('r8', html, 'green');
+
+        }
+
+      }
+
+
+
+      // -- CHECK 7: NEOS Check
+
+      function calc7() {
+
+        const val = document.querySelector('input[name="neos"]:checked').value;
+
+        if (val === 'yes') {
+
+          showResult('r9', 'QQQI, SPYI, and BTCI are operating normally. No action needed.', 'green');
+
+        } else {
+
+          showResult('r9',
+
+            '<strong>Fund issue detected.</strong> Initiate contingency plan:'
+
+            + '<div class="res-row" style="margin-top:8px">'
+
+            + '<div class="res-item"><div class="res-label">Replace QQQI with</div><div class="res-val">QDTE (Roundhill — Section 1256 ✓)</div></div>'
+
+            + '<div class="res-item"><div class="res-label">Replace SPYI with</div><div class="res-val">XDTE (Roundhill — Section 1256 ✓)</div></div>'
+
+            + '<div class="res-item"><div class="res-label">Replace IAUI with</div><div class="res-val">YGLD</div></div>'
+
+            + '<div class="res-item"><div class="res-label">BTCI closure</div><div class="res-val">Reduce to 0%, hold cash in Reserve</div></div>'
+
+            + '</div><div style="margin-top:8px;padding:8px;background:#fef3c7;border-left:3px solid #d97706;font-size:13px"><strong>⚠ Do NOT use JEPI or JEPQ.</strong> They use equity-linked notes (ELNs) — no Section 1256, no ROC. All distributions become 100% ordinary income, permanently eliminating the California tax advantage. Update quarterly estimated payments the same quarter you switch to any contingency fund.</div>', 'red');
+
+        }
+
+      }
+
+
+
+      // ── DISCRETIONARY SPENDING CALCULATOR ───────────────────
+
+      function calc_disc() {
+        const income    = parseNum('disc-income');
+        const base_spend = parseNum('disc-spend');
+        const b2        = parseNum('disc-b2');
+
+        if (isNaN(income) || isNaN(base_spend) || isNaN(b2) ||
+            income <= 0 || base_spend <= 0 || b2 <= 0) {
+          hideResult('disc-result');
+          return;
+        }
+
+        const maintenance   = b2 * 0.06;
+        const discretionary = income - base_spend - maintenance;
+        const incomeRatio   = income / base_spend;
+
+        if (discretionary > 0) {
+          showResult('disc-result',
+            '<div class="res-row">'
+            + '<div class="res-item"><div class="res-label">Max discretionary</div><div class="res-val" style="color:var(--green)">' + fmt(discretionary) + '</div></div>'
+            + '<div class="res-item"><div class="res-label">Income / base spend</div><div class="res-val">' + incomeRatio.toFixed(2) + '&times;</div></div>'
+            + '<div class="res-item"><div class="res-label">Inc. Engine maintenance (6%)</div><div class="res-val">' + fmt(maintenance) + '</div></div>'
+            + '<div class="res-item"><div class="res-label">Income</div><div class="res-val">' + fmt(income) + '</div></div>'
+            + '</div>'
+            + '<div style="margin-top:8px;font-size:13px">Everything above the maintenance reinvestment is genuinely surplus — spend it on travel, purchases, gifts, or anything else without impairing the engine\'s future income.</div>',
+            'green'
+          );
+        } else {
+          showResult('disc-result',
+            '<strong>Engine needs reinvestment — not a discretionary year.</strong>'
+            + '<div class="res-row" style="margin-top:10px">'
+            + '<div class="res-item"><div class="res-label">Surplus</div><div class="res-val" style="color:var(--amber)">' + fmt(discretionary) + '</div></div>'
+            + '<div class="res-item"><div class="res-label">Income</div><div class="res-val">' + fmt(income) + '</div></div>'
+            + '<div class="res-item"><div class="res-label">Base spend</div><div class="res-val">' + fmt(base_spend) + '</div></div>'
+            + '<div class="res-item"><div class="res-label">Inc. Engine maintenance (6%)</div><div class="res-val">' + fmt(maintenance) + '</div></div>'
+            + '</div>'
+            + '<div style="margin-top:8px;font-size:13px">Reinvest all surplus into Income Engine this year to keep income growing in line with spending.</div>',
+            'amber'
+          );
+        }
+      }
+
+
+      // -- Test Portfolio Calculator
+      function calcTP() {
+        const b2    = parseNum('tp-b2');
+        const bills = parseNum('tp-bills');
+
+        if (isNaN(b2) || isNaN(bills) || b2 <= 0 || bills <= 0) {
+          hideResult('tp-result');
+          return;
+        }
+
+        const YIELD      = 0.1435;
+        const annIncome  = b2 * YIELD;
+        const moIncome   = annIncome / 12;
+        const surplus    = moIncome - bills;
+        const b1Target   = bills * 36;          // 3× annual bills
+        const b1Warn     = bills * 3;           // ~3 months bills
+        const annBills   = bills * 12;
+        const maint      = b2 * 0.06;          // engine maintenance
+        const discr      = annIncome - annBills - maint;
+
+        const moMonths   = surplus > 0 ? Math.ceil(b1Target / surplus) : null;
+
+        // Reinvestment splits (40/35/10/15) of surplus
+        const rQQQI = surplus * 0.40;
+        const rSPYI = surplus * 0.35;
+        const rBTCI = surplus * 0.10;
+        const rIAUI = surplus * 0.15;
+
+        const surplusColor = surplus >= 0 ? 'var(--green)' : 'var(--red)';
+        const discrColor   = discr   >= 0 ? 'var(--green)' : 'var(--amber)';
+
+        let html = '<div class="res-row">'
+          + '<div class="res-item"><div class="res-label">Monthly Income (14.35%)</div><div class="res-val" style="color:var(--green)">' + fmt(moIncome) + '/mo</div></div>'
+          + '<div class="res-item"><div class="res-label">Monthly Surplus</div><div class="res-val" style="color:' + surplusColor + '">' + fmt(surplus) + '/mo</div></div>'
+          + '<div class="res-item"><div class="res-label">Reserve Target (3× annual bills)</div><div class="res-val" style="color:var(--navy)">' + fmt(b1Target) + '</div></div>'
+          + '<div class="res-item"><div class="res-label">Reserve Warning Level</div><div class="res-val" style="color:var(--amber)">' + fmt(b1Warn) + '</div></div>'
+          + '<div class="res-item"><div class="res-label">Discretionary/yr</div><div class="res-val" style="color:' + discrColor + '">' + fmt(discr) + '</div></div>'
+          + '</div>';
+
+        if (surplus > 0) {
+          html += '<div style="margin-top:10px;font-size:13px;line-height:1.7">'
+            + '<strong>After Reserve is filled — reinvest quarterly surplus 40/35/10/15:</strong><br>'
+            + 'QQQI ' + fmt(rQQQI) + '/mo &nbsp;· SPYI ' + fmt(rSPYI) + '/mo &nbsp;· BTCI ' + fmt(rBTCI) + '/mo &nbsp;· IAUI ' + fmt(rIAUI) + '/mo'
+            + (moMonths ? '<br><span style="color:var(--amber)">Skip reinvestment until Reserve target is filled — ~' + moMonths + ' months.</span>' : '')
+            + '</div>';
+          showResult('tp-result', html, 'blue');
+        } else {
+          html += '<div style="margin-top:8px;font-size:13px;color:var(--red)">Income is below monthly bills — Reserve will be drawn down each month. Increase Income Engine or reduce bills.</div>';
+          showResult('tp-result', html, 'amber');
+        }
+      }
+
+      // -- Reset All
+
+      function resetAll() {
+
+        for (let i = 1; i <= 7; i++) {
+
+          const cb = document.getElementById('c' + i);
+
+          if (cb) { cb.checked = false; toggleDone(i); }
+
+        }
+
+        document.querySelectorAll('.cl-body input[type="number"], .cl-body input.cl-dollar').forEach(el => el.value = '');
+
+        const clYear = document.getElementById('cl-year');
+
+        const clDate = document.getElementById('cl-date');
+
+        if (clYear) clYear.value = '';
+
+        if (clDate) clDate.value = '';
+
+        const br = document.querySelector('input[name="bear"][value="no"]');   if (br) br.checked = true;
+
+        const nr = document.querySelector('input[name="neos"][value="yes"]');  if (nr) nr.checked = true;
+
+        for (let i = 1; i <= 7; i++) {
+
+          const r = document.getElementById('r' + i); if (r) r.className = 'cl-result';
+
+        }
+
+        [3,4,5].forEach(n => document.getElementById('item'+n).classList.remove('skipped'));
+
+        const bmPeak = document.getElementById('bm-peak'); if (bmPeak) bmPeak.value = '';
+
+        const bmCurr = document.getElementById('bm-current'); if (bmCurr) bmCurr.value = '';
+
+        const bmRes  = document.getElementById('bm-result'); if (bmRes) bmRes.style.display = 'none';
+
+        globalPortfolio = null; globalYears = null; globalBaseline = null;
+
+        healthRatio = null; globalExpSpend = null; newAnnualSpend = null;
+
+        const gb = document.getElementById('global-bar'); if (gb) gb.classList.remove('visible');
+
+        const sc = document.getElementById('cl-scenario'); if (sc) { sc.value = 'B'; activeScenario = 'B'; }
+
+      }
+
+      calc7();
+    </script>
+  </body>
+  
+</html>
